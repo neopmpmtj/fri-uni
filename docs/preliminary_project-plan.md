@@ -180,3 +180,25 @@ The staff domain app is **`proformas`**, not `office`. `accounts` remains the Us
 ### Open questions still open
 
 None.
+
+## Update 2026-09-06 — Daikin catalog seed
+
+Demo `seed_catalog` now includes **Daikin** in addition to Mitsubishi, LG, and Nippon.
+
+### What changed
+
+- **Daikin styles** come from the Portugal air-to-air heat-pump page (bombas de calor ar-ar): Sensira, Comfora, Perfera, Perfera Floor, Stylish, Emura, Ururu Sarara. Each style still gets indoor/outdoor 9k/12k/18k BTU with round demo prices.
+- **Not seeded as styles:** Multi / Multi+ / pair (system layouts, not named indoor ranges). Ducted/concealed ceiling is listed as a form factor on that page but has no named consumer series there, so it is omitted until a real range name is supplied.
+- Prices remain placeholders, not live Daikin list prices.
+
+### Apps added/removed
+
+None.
+
+### Decisions
+
+- Seed styles follow Daikin PT named ranges, not generic “Split”.
+
+### Open questions still open
+
+None.

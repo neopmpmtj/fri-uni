@@ -55,4 +55,18 @@ def test_seed_catalog_twice_does_not_duplicate_brands():
     call_command("seed_catalog")
     call_command("seed_catalog")
     assert Brand.objects.filter(name="Mitsubishi").count() == 1
-    assert Brand.objects.filter(name__in=["Mitsubishi", "LG", "Nippon"]).count() == 3
+    assert Brand.objects.filter(
+        name__in=["Mitsubishi", "LG", "Nippon", "Daikin"]
+    ).count() == 4
+    daikin_styles = set(
+        Style.objects.filter(brand__name="Daikin").values_list("name", flat=True)
+    )
+    assert daikin_styles == {
+        "Sensira",
+        "Comfora",
+        "Perfera",
+        "Perfera Floor",
+        "Stylish",
+        "Emura",
+        "Ururu Sarara",
+    }

@@ -145,7 +145,7 @@ Always-on columns on every proformas entity. Soft-delete manager: default querys
 ### Notes
 
 - Reason-required fields: `models.list_price`, `tubing_lengths.price`. Admin form must collect `reason` on those changes. Creating a row does not need a reason.
-- `seed_catalog`: Mitsubishi, LG, Nippon; a few styles; indoor/outdoor models at 9k/12k/18k (or similar) with list prices; a few tubing lengths; parameters `currency=EUR`, `default_upfront_discount_percent` (pick a number, e.g. 10), `tubing_length_unit=m`. Safe to run twice. Do not call it from production deploy.
+- `seed_catalog`: Mitsubishi, LG, Nippon (style Split) plus Daikin PT air-to-air ranges (Sensira, Comfora, Perfera, Perfera Floor, Stylish, Emura, Ururu Sarara); indoor/outdoor models at 9k/12k/18k with demo list prices; a few tubing lengths; parameters `currency=EUR`, `default_upfront_discount_percent` (pick a number, e.g. 10), `tubing_length_unit=m`. Safe to run twice. Do not call it from production deploy.
 - Staff still must not use `/admin/`. Catalog is admin-only by design.
 
 ### Tests
