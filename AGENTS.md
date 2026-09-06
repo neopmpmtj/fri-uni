@@ -1,6 +1,6 @@
 # fri-uni — Agent instructions
 
-Django project with settings in `conf/`. Email auth via `accounts` app. Domain models for the HVAC proforma workflow are **not implemented yet** — follow [`docs/data-points.md`](docs/data-points.md).
+Django project with settings in `conf/`. Email auth via `accounts` app. Domain models live in **`proformas`** — follow [`docs/data-points.md`](docs/data-points.md).
 
 **Read [`docs/handoff.md`](docs/handoff.md) first** — session snapshot (done / not done / next).  
 **Read [`docs/preliminary_project-plan.md`](docs/preliminary_project-plan.md)** — product scope and decisions.  
@@ -11,7 +11,7 @@ Django project with settings in `conf/`. Email auth via `accounts` app. Domain m
 ## Architecture
 
 ```text
-views / management commands  →  services.py  →  models.py
+views / management commands  →  proformas/services.py  →  models.py
 ```
 
 - Business logic in `services.py`, not views or templates
@@ -83,9 +83,9 @@ Mark complete during session-handoff: `- [x] ... (completed YYYY-MM-DD)`
 
 ## Session
 
-**Done:** Implementation playbook (Phases 1–8), front-end chrome spec, product/data docs closed. No `office` app yet.
+**Done:** Phases 1–8 in `proformas`. Local login + dashboard + clients list. pytest 25 passed.
 
-**Not done:** Phases 1–8 of [`docs/project-plan.md`](docs/project-plan.md) (application code).
+**Not done:** Commit; production deploy; letterhead; real prices; full browser pass of quoting/PDF.
 
-**Next:** Phase 1 — login, `role`, dashboard (language once), work shell, i18n. Read [`docs/handoff.md`](docs/handoff.md) and [`docs/front-end-project-plan.md`](docs/front-end-project-plan.md).
+**Next:** Click through sites → draft → issue → PDF, then commit if asked. Read [`docs/handoff.md`](docs/handoff.md).
 

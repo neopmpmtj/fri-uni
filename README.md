@@ -2,13 +2,13 @@
 
 Internal HVAC back office for creating **proforma invoices** — client quotes for equipment installation and cost, including an upfront-payment discount. Not an official finance document.
 
-> **Last updated:** 2026-09-06 10:15 WEST
+> **Last updated:** 2026-09-06 10:58 WEST
 
 ## What it does
 
 Staff sign in with email, pick language on the dashboard, then quote from a catalog (brand → style → model): client and site, equipment lines, optional extra tubing per line, extra labour and observations. **Issue** freezes a snapshot; staff can view the quote on screen and download a PDF. Clients do not log in.
 
-A later phase adds a management command so an LLM agent can create proformas in one shot (same database, mandatory `--user`).
+A management command (`create_proforma`) can create a proforma in one shot (same database, mandatory `--user`).
 
 ## Quick start
 
@@ -41,4 +41,4 @@ pytest
 
 ## Pick up from here
 
-Scope, data model, implementation phases, and UI chrome are written. **No domain app yet.** Next: Phase 1 (login, roles, dashboard, i18n) per [`docs/handoff.md`](docs/handoff.md) and [`docs/project-plan.md`](docs/project-plan.md).
+Staff web MVP and CLI are implemented (`proformas`). Work is uncommitted. Next: finish local click-through (sites, draft, issue, PDF), then commit when asked. See [`docs/handoff.md`](docs/handoff.md).

@@ -18,16 +18,16 @@ Already in the repo (do not rebuild): Django `conf/` settings, `accounts.User` (
 ## Architecture (every phase)
 
 ```text
-views / management commands  →  office/services.py  →  models.py
+views / management commands  →  proformas/services.py  →  models.py
 ```
 
-- New Django app **`office`** for all domain tables. Keep **`accounts`** for `User`.
+- New Django app **`proformas`** for all domain tables. Keep **`accounts`** for `User`.
 - Plain Django templates + plain JavaScript. Project-level `templates/` and `static/` (add `DIRS` in `conf/settings/base.py`).
-- Money math, numbering, issue/lock, snapshots: **`office/services.py` only** — not views, not templates, not admin `save_model` copies of the same logic.
+- Money math, numbering, issue/lock, snapshots: **`proformas/services.py` only** — not views, not templates, not admin `save_model` copies of the same logic.
 - Issued proformas are frozen. Corrections = a new proforma. `cancelled` does not unlock.
 - Tests: pytest-django, **2–6 tests per phase**. Prefer service tests. No Selenium, no coverage gates, no factory-boy unless it becomes painful.
 
-**User model vs data-points:** extend `accounts.User` with `role` (`staff` | `admin`) only. Map `role=admin` → `is_staff=True` (Django contrib admin). `role=staff` → `is_staff=False`; staff get 403 on `/admin/`. Do **not** add always-on audit columns to `User`. Do **not** add a `language` column. All `office` entities get always-on columns from data-points (`created_at`, `updated_at`, `created_by`, `updated_by`, `deleted_at`, `deleted_by`). Unique keys apply to **live** rows only (`deleted_at` is null).
+**User model vs data-points:** extend `accounts.User` with `role` (`staff` | `admin`) only. Map `role=admin` → `is_staff=True` (Django contrib admin). `role=staff` → `is_staff=False`; staff get 403 on `/admin/`. Do **not** add always-on audit columns to `User`. Do **not** add a `language` column. All `proformas` entities get always-on columns from data-points (`created_at`, `updated_at`, `created_by`, `updated_by`, `deleted_at`, `deleted_by`). Unique keys apply to **live** rows only (`deleted_at` is null).
 
 ## Locked decisions (implementation)
 
@@ -72,7 +72,7 @@ Layout details: [`front-end-project-plan.md`](front-end-project-plan.md).
 - One shared chrome dictionary in `i18n.js`. Later pages add keys or a page `*_i18n.js` if large. Normalize any value starting with `pt` to `pt`; alias `"pt-PT"` → `pt`.
 - Work nav: Home (dashboard), Clients, Sites, Proformas. Dashboard cards: Clients, Sites, Proformas; Catalog/Admin card only if `role=admin`.
 - Gear: Settings, signed-in email, Sign out. No Help, no “sign out other devices”, no theme.
-- `created_by` on future office rows: the logged-in user.
+- `created_by` on future proformas rows: the logged-in user.
 
 ### Tests (accounts / thin views)
 
@@ -82,8 +82,8 @@ Layout details: [`front-end-project-plan.md`](front-end-project-plan.md).
 
 ### Checkboxes
 
-- [ ] Phase 1: `role` on `User`, login/logout, staff shell, `fu-lang` i18n (added 2026-09-06)
-- [ ] Phase 1 tests (added 2026-09-06)
+- [x] Phase 1: `role` on `User`, login/logout, staff shell, `fu-lang` i18n (completed 2026-09-06)
+- [x] Phase 1 tests (completed 2026-09-06)
 
 ---
 
@@ -95,15 +95,15 @@ Layout details: [`front-end-project-plan.md`](front-end-project-plan.md).
 
 ### Files
 
-- `office/` — app: `models.py` (split modules only if `models.py` becomes unwieldy), `services.py`, `apps.py`, `admin.py` (empty or register without custom UI)
-- `office/migrations/0001_initial.py`
-- `conf/settings/base.py` — add `"office"` to `INSTALLED_APPS`
+- `proformas/` — app: `models.py` (split modules only if `models.py` becomes unwieldy), `services.py`, `apps.py`, `admin.py` (empty or register without custom UI)
+- `proformas/migrations/0001_initial.py`
+- `conf/settings/base.py` — add `"proformas"` to `INSTALLED_APPS`
 
 ### Models (fields exactly as data-points)
 
 `Parameter`, `Client`, `Site`, `Brand`, `Style`, `Model` (catalog machine; Django model name e.g. `EquipmentModel` if `Model` is too awkward — document the ORM name in a one-line comment), `TubingLength`, `Proforma`, `ProformaLine`, `ChangeLog`, `ActivityLog`.
 
-Always-on columns on every office entity. Soft-delete manager: default queryset live rows only; `all_objects` (or similar) for including deleted.
+Always-on columns on every proformas entity. Soft-delete manager: default queryset live rows only; `all_objects` (or similar) for including deleted.
 
 `ChangeLog`: entity type, entity id, field, old, new, actor, actor type (`user` | `system`), time, reason (required only when the field is reason-required).
 
@@ -113,7 +113,7 @@ Always-on columns on every office entity. Soft-delete manager: default queryset 
 
 ### Notes
 
-- `office/services.py`: `log_change(...)`, `log_activity(...)`. Views/CLI must not write log tables directly.
+- `proformas/services.py`: `log_change(...)`, `log_activity(...)`. Views/CLI must not write log tables directly.
 - Unique constraints: live `email` is already on `User`; live `clients.name`; live `brands.name`; live `styles.name` per brand; live `models` style+kind+btu; live `tubing_lengths.length`; live `parameters.key`; live `proformas.number`. Partial unique indexes (PostgreSQL) or equivalent live-only uniqueness. SQLite is local default — prefer constraints that work on both, or document that live uniqueness is enforced in services if a partial index is prod-only.
 - Do not implement issue/lock behaviour yet beyond storing `status` and nullable snapshot/total fields.
 
@@ -124,8 +124,8 @@ Always-on columns on every office entity. Soft-delete manager: default queryset 
 
 ### Checkboxes
 
-- [ ] Phase 2: `office` models + migrate + log helpers (added 2026-09-06)
-- [ ] Phase 2 tests (added 2026-09-06)
+- [x] Phase 2: `proformas` models + migrate + log helpers (completed 2026-09-06)
+- [x] Phase 2 tests (completed 2026-09-06)
 
 ---
 
@@ -137,9 +137,9 @@ Always-on columns on every office entity. Soft-delete manager: default queryset 
 
 ### Files
 
-- `office/admin.py` — Brand, Style, EquipmentModel, TubingLength, Parameter, ChangeLog (read-only), ActivityLog (read-only)
-- `office/services.py` — reason-required price updates
-- `office/management/commands/seed_catalog.py`
+- `proformas/admin.py` — Brand, Style, EquipmentModel, TubingLength, Parameter, ChangeLog (read-only), ActivityLog (read-only)
+- `proformas/services.py` — reason-required price updates
+- `proformas/management/commands/seed_catalog.py`
 - `accounts` admin already provisions users (Phase 1)
 
 ### Notes
@@ -155,9 +155,9 @@ Always-on columns on every office entity. Soft-delete manager: default queryset 
 
 ### Checkboxes
 
-- [ ] Phase 3: catalog/parameters admin + reason-required prices (added 2026-09-06)
-- [ ] Phase 3: `seed_catalog` (added 2026-09-06)
-- [ ] Phase 3 tests (added 2026-09-06)
+- [x] Phase 3: catalog/parameters admin + reason-required prices (completed 2026-09-06)
+- [x] Phase 3: `seed_catalog` (completed 2026-09-06)
+- [x] Phase 3 tests (completed 2026-09-06)
 
 ---
 
@@ -169,8 +169,8 @@ Always-on columns on every office entity. Soft-delete manager: default queryset 
 
 ### Files
 
-- `office/views.py`, `office/forms.py`, `office/urls.py`
-- `templates/office/client_list.html`, `site_list.html` (work layout)
+- `proformas/views.py`, `proformas/forms.py`, `proformas/urls.py`
+- `templates/proformas/client_list.html`, `site_list.html` (work layout)
 - `templates/includes/drawer.html` (shared) — create/edit in the drawer, not separate full-page forms
 - `static/js/` — drawer open/close + i18n keys (`data-i18n`; English fallback in HTML)
 - Wire URLs into `conf/urls.py`
@@ -190,8 +190,8 @@ Always-on columns on every office entity. Soft-delete manager: default queryset 
 
 ### Checkboxes
 
-- [ ] Phase 4: clients and sites custom UI (added 2026-09-06)
-- [ ] Phase 4 tests (added 2026-09-06)
+- [x] Phase 4: clients and sites custom UI (completed 2026-09-06)
+- [x] Phase 4 tests (completed 2026-09-06)
 
 ---
 
@@ -203,8 +203,8 @@ Always-on columns on every office entity. Soft-delete manager: default queryset 
 
 ### Files
 
-- `office/services.py` — `create_draft`, `add_line` / `update_line` / `remove_line`, `recompute_draft_totals` (draft totals may be stored or derived; issued totals are Phase 6)
-- `office/views.py` / forms / templates: proforma **list** + **work page** (header fields on the page; lines `.grid`; add/edit line in the shared drawer). See [`front-end-project-plan.md`](front-end-project-plan.md).
+- `proformas/services.py` — `create_draft`, `add_line` / `update_line` / `remove_line`, `recompute_draft_totals` (draft totals may be stored or derived; issued totals are Phase 6)
+- `proformas/views.py` / forms / templates: proforma **list** + **work page** (header fields on the page; lines `.grid`; add/edit line in the shared drawer). See [`front-end-project-plan.md`](front-end-project-plan.md).
 - i18n keys for the quoting screens
 
 ### Notes
@@ -229,8 +229,8 @@ Always-on columns on every office entity. Soft-delete manager: default queryset 
 
 ### Checkboxes
 
-- [ ] Phase 5: draft proforma + lines + live totals (added 2026-09-06)
-- [ ] Phase 5 tests (added 2026-09-06)
+- [x] Phase 5: draft proforma + lines + live totals (completed 2026-09-06)
+- [x] Phase 5 tests (completed 2026-09-06)
 
 ---
 
@@ -242,7 +242,7 @@ Always-on columns on every office entity. Soft-delete manager: default queryset 
 
 ### Files
 
-- `office/services.py` — `issue_proforma`, `cancel_proforma`; refuse updates when `status != draft`
+- `proformas/services.py` — `issue_proforma`, `cancel_proforma`; refuse updates when `status != draft`
 - Views: issue and cancel POST actions on the proforma page
 - Snapshot field list: copy from data-points (`proformas` and `proforma_lines` snapshot sections)
 
@@ -263,8 +263,8 @@ Always-on columns on every office entity. Soft-delete manager: default queryset 
 
 ### Checkboxes
 
-- [ ] Phase 6: issue snapshot/lock + cancel (added 2026-09-06)
-- [ ] Phase 6 tests (added 2026-09-06)
+- [x] Phase 6: issue snapshot/lock + cancel (completed 2026-09-06)
+- [x] Phase 6 tests (completed 2026-09-06)
 
 ---
 
@@ -276,8 +276,8 @@ Always-on columns on every office entity. Soft-delete manager: default queryset 
 
 ### Files
 
-- `office/services.py` (or `office/pdf.py` imported by services) — `build_proforma_pdf(proforma) -> bytes`
-- `office/quote_i18n.py` — small EN/PT dict for quote labels (keep keys aligned with JS)
+- `proformas/services.py` (or `proformas/pdf.py` imported by services) — `build_proforma_pdf(proforma) -> bytes`
+- `proformas/quote_i18n.py` — small EN/PT dict for quote labels (keep keys aligned with JS)
 - Quote HTML template (on-screen) + print/PDF stylesheet
 - Download view; `activity_logs` action `download_pdf` is optional but listed in data-points as typical
 - `requirements.txt` — WeasyPrint
@@ -299,9 +299,9 @@ Always-on columns on every office entity. Soft-delete manager: default queryset 
 
 ### Checkboxes
 
-- [ ] Phase 7: issued on-screen quote + WeasyPrint download (added 2026-09-06)
-- [ ] Phase 7: `build_proforma_pdf` seam; WeasyPrint noted in DEPLOYMENT.md (added 2026-09-06)
-- [ ] Phase 7 tests (added 2026-09-06)
+- [x] Phase 7: issued on-screen quote + WeasyPrint download (completed 2026-09-06)
+- [x] Phase 7: `build_proforma_pdf` seam; WeasyPrint noted in DEPLOYMENT.md (completed 2026-09-06)
+- [x] Phase 7 tests (completed 2026-09-06)
 
 ---
 
@@ -313,8 +313,8 @@ Always-on columns on every office entity. Soft-delete manager: default queryset 
 
 ### Files
 
-- `office/management/commands/create_proforma.py`
-- Calls `office/services.py` only (no duplicated math)
+- `proformas/management/commands/create_proforma.py`
+- Calls `proformas/services.py` only (no duplicated math)
 
 ### Flags
 
@@ -339,8 +339,8 @@ Optional:
 
 ### Checkboxes
 
-- [ ] Phase 8: `create_proforma` management command (added 2026-09-06)
-- [ ] Phase 8 tests (added 2026-09-06)
+- [x] Phase 8: `create_proforma` management command (completed 2026-09-06)
+- [x] Phase 8 tests (completed 2026-09-06)
 
 ---
 

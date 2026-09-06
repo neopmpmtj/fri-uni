@@ -1,0 +1,114 @@
+{% extends "work_base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<script src="{% static 'js/drawer.js' %}?v=1" defer></script>
+{% endblock %}
+
+{% block heading %}{{ proforma.number }}{% endblock %}
+
+{% block actions %}
+{% if is_draft %}
+<a class="btn primary" href="{% url 'proforma_detail' proforma.pk %}?new_line=1" data-i18n="addLine">Add line</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<p class="muted">{{ proforma.site.client.name }} / {{ proforma.site.alias_1 }} — {{ proforma.get_status_display }}</p>
+
+<form method="post" class="header-fields">
+    {% csrf_token %}
+    <label>
+        <span data-i18n="discountPercent">Upfront discount %</span>
+        {{ header_form.upfront_discount_percent }}
+    </label>
+    <label>
+        <span data-i18n="extraLabour">Extra labour</span>
+        {{ header_form.extra_labour }}
+    </label>
+    <label style="grid-column:1 / -1;">
+        <span data-i18n="observations">Observations</span>
+        {{ header_form.observations }}
+    </label>
+{% if is_draft %}
+    <div>
+        <button type="submit" name="action" value="save_header" class="btn primary" data-i18n="save">Save</button>
+        <button type="submit" name="action" value="issue" class="btn primary" form="issue-form" data-i18n="issue">Issue</button>
+    </div>
+    {% endif %}
+    {% if is_issued %}
+    <div>
+        <button type="submit" name="action" value="cancel_proforma" class="btn danger" form="issue-form" data-i18n="cancel">Cancel</button>
+        <a class="btn primary" href="{% url 'proforma_quote' proforma.pk %}" data-i18n="viewQuote">View quote</a>
+        <a class="btn ghost" href="{% url 'proforma_pdf' proforma.pk %}" data-i18n="downloadPdf">Download PDF</a>
+    </div>
+    {% endif %}
+    {% if is_cancelled %}
+    <div>
+        <a class="btn primary" href="{% url 'proforma_quote' proforma.pk %}" data-i18n="viewQuote">View quote</a>
+        <a class="btn ghost" href="{% url 'proforma_pdf' proforma.pk %}" data-i18n="downloadPdf">Download PDF</a>
+    </div>
+    {% endif %}
+</form>
+<form id="issue-form" method="post">{% csrf_token %}</form>
+
+<dl class="totals">
+    <div>
+        <dt data-i18n="equipmentSubtotal">Equipment</dt>
+        <dd>{{ proforma.equipment_subtotal }}</dd>
+    </div>
+    <div>
+        <dt data-i18n="tubingTotal">Tubing</dt>
+        <dd>{{ proforma.tubing_total }}</dd>
+    </div>
+    <div>
+        <dt data-i18n="discountAmount">Discount</dt>
+        <dd>{{ proforma.discount_amount }}</dd>
+    </div>
+    <div>
+        <dt data-i18n="grandTotal">Grand total</dt>
+        <dd>{{ proforma.grand_total }}</dd>
+    </div>
+</dl>
+
+<div class="table-wrap">
+    <table class="grid">
+        <thead>
+            <tr>
+                <th data-i18n="model">Model</th>
+                <th data-i18n="quantity">Quantity</th>
+                <th data-i18n="extraTubing">Extra tubing</th>
+                <th data-i18n="lineTotal">Line total</th>
+                <th data-i18n="actions">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for line in lines %}
+            <tr>
+                <td>
+                    {% if is_draft %}
+                    {{ line.model }}
+                    {% else %}
+                    {{ line.brand_name }} {{ line.style_name }} {{ line.kind }} {{ line.btu }}
+                    {% endif %}
+                </td>
+                <td>{{ line.quantity }}</td>
+                <td>{% if line.extra_tubing %}{{ line.tubing_length }}{% else %}—{% endif %}</td>
+                <td>{{ line.line_total }}</td>
+                <td>
+                    {% if is_draft %}
+                    <a href="{% url 'proforma_detail' proforma.pk %}?line={{ line.pk }}" data-i18n="edit">Edit</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" data-i18n="empty">No rows yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if is_draft %}
+{% include "includes/drawer.html" with drawer_title="Line" drawer_form_template="proformas/includes/line_form.html" %}
+{% endif %}
+{% endblock %}

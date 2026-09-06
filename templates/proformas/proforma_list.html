@@ -1,0 +1,53 @@
+{% extends "work_base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<script src="{% static 'js/drawer.js' %}?v=1" defer></script>
+{% endblock %}
+
+{% block heading %}<span data-i18n="proformas">Proformas</span>{% endblock %}
+
+{% block actions %}
+<a class="btn primary" href="{% url 'proforma_list' %}?new=1" data-i18n="newDraft">New draft</a>
+{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <form method="get" class="grow" style="display:flex;gap:0.75rem;align-items:center;">
+        <input type="search" name="q" value="{{ q }}" data-i18n-placeholder="search" placeholder="Search">
+        <select name="status" onchange="this.form.submit()">
+            <option value="" data-i18n="allStatuses">All statuses</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+<div class="table-wrap">
+    <table class="grid">
+        <thead>
+            <tr>
+                <th data-i18n="number">Number</th>
+                <th data-i18n="site">Site</th>
+                <th data-i18n="status">Status</th>
+                <th data-i18n="grandTotal">Grand total</th>
+                <th data-i18n="updated">Updated</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in proformas %}
+            <tr>
+                <td><a href="{% url 'proforma_detail' row.pk %}">{{ row.number }}</a></td>
+                <td>{{ row.site.client.name }} / {{ row.site.alias_1 }}</td>
+                <td>{{ row.get_status_display }}</td>
+                <td>{{ row.grand_total|default:"" }}</td>
+                <td>{{ row.updated_at|date:"Y-m-d H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" data-i18n="empty">No rows yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "includes/drawer.html" with drawer_title="New draft" drawer_form_template="proformas/includes/new_draft_form.html" %}
+{% endblock %}

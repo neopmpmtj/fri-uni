@@ -159,3 +159,24 @@ None.
 ### Open questions still open
 
 None.
+
+## Update 2026-09-06 — Django domain app name
+
+The staff domain app is **`proformas`**, not `office`. `accounts` remains the User/login app. Implementation order is unchanged ([`project-plan.md`](project-plan.md)).
+
+### What changed
+
+- **App package:** `proformas` (`INSTALLED_APPS`, services, models, admin, management commands, staff templates).
+
+### Apps added/removed
+
+- Named: `proformas`.
+- Rejected name: `office`.
+
+### Decisions
+
+- Django-style plural of the main entity.
+
+### Open questions still open
+
+None.

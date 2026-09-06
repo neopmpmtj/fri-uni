@@ -187,11 +187,11 @@ Document-like page for the client-facing quote (snapshots, line table, totals, o
 
 ## Checkboxes
 
-- [ ] Front-end: CSS tokens + dashboard and work layouts (added 2026-09-06)
-- [ ] Front-end: gear Settings popover (email + sign out) (added 2026-09-06)
-- [ ] Front-end: language select on dashboard only (`fu-lang`) (added 2026-09-06)
-- [ ] Front-end: shared drawer (backdrop, Escape, create/edit) (added 2026-09-06)
-- [ ] Front-end: Clients list + drawer (added 2026-09-06)
-- [ ] Front-end: Sites list + drawer (added 2026-09-06)
-- [ ] Front-end: Proforma list + work page + line drawer (added 2026-09-06)
-- [ ] Front-end: issued quote view chrome (added 2026-09-06)
+- [x] Front-end: CSS tokens + dashboard and work layouts (completed 2026-09-06)
+- [x] Front-end: gear Settings popover (email + sign out) (completed 2026-09-06)
+- [x] Front-end: language select on dashboard only (`fu-lang`) (completed 2026-09-06)
+- [x] Front-end: shared drawer (backdrop, Escape, create/edit) (completed 2026-09-06)
+- [x] Front-end: Clients list + drawer (completed 2026-09-06)
+- [x] Front-end: Sites list + drawer (completed 2026-09-06)
+- [x] Front-end: Proforma list + work page + line drawer (completed 2026-09-06)
+- [x] Front-end: issued quote view chrome (completed 2026-09-06)

@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title data-i18n="dashboardTitle">Proformas</title>
+    {% include "includes/head.html" %}
+</head>
+<body>
+    <div class="page-account-bar">
+        <label class="lang-label">
+            <span class="visually-hidden" data-i18n="language">Language</span>
+            <select id="pref-language" aria-label="Language">
+                <option value="en">English</option>
+                <option value="pt">Português</option>
+            </select>
+        </label>
+        <div class="account-bar-right">
+            {% include "includes/account_settings.html" %}
+        </div>
+    </div>
+    <main class="dash-main">
+        <h1 data-i18n="dashboardTitle">Proformas</h1>
+        <p class="muted" data-i18n="dashboardLead">Choose a workspace.</p>
+        <div class="card-grid">
+            <a class="dash-card" href="{% url 'client_list' %}">
+                <h2 data-i18n="clients">Clients</h2>
+                <p data-i18n="clientsDesc">Customer organisations.</p>
+            </a>
+            <a class="dash-card" href="{% url 'site_list' %}">
+                <h2 data-i18n="sites">Sites</h2>
+                <p data-i18n="sitesDesc">Work locations.</p>
+            </a>
+            <a class="dash-card" href="{% url 'proforma_list' %}">
+                <h2 data-i18n="proformas">Proformas</h2>
+                <p data-i18n="proformasDesc">Draft, issue, and download quotes.</p>
+            </a>
+            {% if user.role == "admin" %}
+            <a class="dash-card" href="/admin/">
+                <h2 data-i18n="catalogAdmin">Catalog (Django admin)</h2>
+                <p data-i18n="catalogAdminDesc">Brands, models, tubing, and parameters.</p>
+            </a>
+            {% endif %}
+        </div>
+    </main>
+    <script src="{% static 'js/dashboard.js' %}?v=1" defer></script>
+</body>
+</html>
