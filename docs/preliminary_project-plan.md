@@ -106,3 +106,56 @@ None.
 ### Open questions still open
 
 None.
+
+## Update 2026-09-06 — implementation surfaces
+
+Decisions for how the staff app is built (not schema). Implementation order is [`project-plan.md`](project-plan.md).
+
+### What changed
+
+- **Admin vs custom UI:** Django contrib admin for catalog, parameters, users, and audit. Custom templates for clients, sites, and the proforma draft → issue → on-screen quote → PDF workflow. Staff (`role=staff`) must not use `/admin/`. Django admin UI stays English.
+- **Login:** email + password only. Google OAuth fields on `accounts.User` stay unused.
+- **i18n:** two languages, one app (`en` | `pt`). Copy CentCompras / [warehouse_V2](https://github.com/neopmpmtj/warehouse_V2) [`docs/i18n-pattern.md`](https://github.com/neopmpmtj/warehouse_V2/blob/main/docs/i18n-pattern.md): English fallback in HTML, vanilla JS dictionaries, `data-i18n*` attributes, preference in `localStorage` (`fu-lang`). No Django gettext `.po` files, no `LocaleMiddleware` UI switching, no `User.language` column. Dark/light theme from warehouse is not in this slice.
+- **PDF / visualization:** MVP shows the issued quote on screen. Also generate a real PDF on download (`build_proforma_pdf` → bytes) so a later email feature can attach it. Do not store PDF files. Do not send email in this slice (Gmail vs local mail is a future enhancement).
+- **PDF language:** WeasyPrint cannot read `localStorage`. Language JS also writes a `fu-lang` cookie; quote HTML/PDF uses a small server-side EN/PT dict. Switch the UI to English before download for a UK client.
+- **Seed:** optional idempotent `seed_catalog` management command (demo brands/models/tubing/parameters). Not run automatically in production.
+- **CLI:** last implementation phase; same services as the web; flag contract unchanged in data-points.
+
+### Apps added/removed
+
+None.
+
+### Decisions
+
+- UI translation is client-side JS (warehouse_V2), not gettext.
+- Email send is out of scope; PDF bytes are the attachment seam.
+- Catalog maintenance is Django admin; quoting is custom UI.
+
+### Open questions still open
+
+None.
+
+## Update 2026-09-06 — staff UI chrome
+
+Visual/chrome spec: [`front-end-project-plan.md`](front-end-project-plan.md). Copied from warehouse_V2; not a second product.
+
+### What changed
+
+- **Two layouts:** dashboard (card grid) and work page (topbar + table). Language `<select>` **only on the dashboard**; work pages read `fu-lang` and do not offer a switcher.
+- **Gear (Settings):** top right on dashboard and work pages. Shows signed-in email and Sign out. No Help manuals, no “sign out other devices”, no dark theme.
+- **List + drawer:** clients, sites, and proforma **lines** create/edit in a right-hand drawer (warehouse Items pattern). Sites stay a first-class list page (not nested under clients like warehouse Suppliers).
+- **Proforma:** work page with header fields on the page and a lines table; not a Django form wizard.
+- **Catalog console:** do not copy warehouse manager catalog; Django admin remains.
+
+### Apps added/removed
+
+None.
+
+### Decisions
+
+- Server-rendered tables + JS drawer; no warehouse `/api/manage/` clone for MVP.
+- To issue an English PDF, staff switch language on the dashboard first, then download.
+
+### Open questions still open
+
+None.

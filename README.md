@@ -1,0 +1,44 @@
+# fri-uni
+
+Internal HVAC back office for creating **proforma invoices** — client quotes for equipment installation and cost, including an upfront-payment discount. Not an official finance document.
+
+> **Last updated:** 2026-09-06 10:15 WEST
+
+## What it does
+
+Staff sign in with email, pick language on the dashboard, then quote from a catalog (brand → style → model): client and site, equipment lines, optional extra tubing per line, extra labour and observations. **Issue** freezes a snapshot; staff can view the quote on screen and download a PDF. Clients do not log in.
+
+A later phase adds a management command so an LLM agent can create proformas in one shot (same database, mandatory `--user`).
+
+## Quick start
+
+```bash
+source .venv/bin/activate
+cp .env.example .env   # set SECRET_KEY
+.venv/bin/python manage.py migrate
+.venv/bin/python manage.py createsuperuser
+.venv/bin/python manage.py runserver
+pytest
+```
+
+## Documentation
+
+| Doc | Role |
+| --- | --- |
+| [`docs/handoff.md`](docs/handoff.md) | Session snapshot — start here each chat |
+| [`docs/project-plan.md`](docs/project-plan.md) | Phased implementation playbook (one phase at a time) |
+| [`docs/front-end-project-plan.md`](docs/front-end-project-plan.md) | Staff UI chrome (dashboard, drawers, i18n) |
+| [`docs/data-points.md`](docs/data-points.md) | Conceptual tables and fields (source for models) |
+| [`docs/preliminary_project-plan.md`](docs/preliminary_project-plan.md) | Product scope, apps, decisions |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | VPS deploy notes |
+| [`AGENTS.md`](AGENTS.md) | Agent instructions |
+
+## Stack
+
+- Django (`conf/` settings split), plain templates + plain JavaScript
+- Email login via `accounts.User`
+- PostgreSQL in production; SQLite for local dev (see `.env.example`)
+
+## Pick up from here
+
+Scope, data model, implementation phases, and UI chrome are written. **No domain app yet.** Next: Phase 1 (login, roles, dashboard, i18n) per [`docs/handoff.md`](docs/handoff.md) and [`docs/project-plan.md`](docs/project-plan.md).
