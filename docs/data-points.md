@@ -125,7 +125,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 
 ### brands
 
-- Purpose: manufacturer (start: Mitsubishi, LG, Nippon)
+- Purpose: manufacturer (start: Mitsubishi, LG, Nippon, Daikin)
 - Written by (apps): staff web app (admin)
 - Fields (plus always-on):
   - `name` — text, required
