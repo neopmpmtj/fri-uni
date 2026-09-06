@@ -84,9 +84,9 @@ Mark complete during session-handoff: `- [x] ... (completed YYYY-MM-DD)`
 
 ## Session
 
-**Done:** Phases 1–8 plus catalog slice (family → sub-family → item + manufacturer, setup cards, line cascade, internal codes). Manufacturer pricelist link typo fixed. Demo seed with admin/manager. Manager cannot delete.
+**Done:** Phases 1–8 plus catalog slice (family → sub-family → item + manufacturer, VAT on items, setup cards including Parameters and Tubing, line cascade, internal codes). Demo seed with admin/manager. Manager cannot delete.
 
-**Not done:** Production deploy; letterhead; real prices; volume auto-pick; indoor/outdoor auto-pair; commit of this slice.
+**Not done:** Production deploy; letterhead; real prices; volume auto-pick; indoor/outdoor auto-pair; VAT on quote math/PDF; commit of this slice.
 
-**Next:** Hard-refresh Manufacturers → Pricelist, then draft line defaults. Read [`docs/handoff.md`](docs/handoff.md).
+**Next:** Restart runserver, hard-refresh dashboard Setup (VAT / Parameters / Tubing), then New item should pre-select 23%. Read [`docs/handoff.md`](docs/handoff.md).
 

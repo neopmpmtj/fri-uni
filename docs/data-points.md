@@ -20,7 +20,7 @@ At **issue**, snapshot client, site, and catalog display fields onto the proform
 
 Shared core in one database.
 
-- Staff web app (MVP) writes all tables below. Catalog identity and setup (families, sub-families, manufacturers, items) are staff pages. Django admin is not the catalog UI.
+- Staff web app (MVP) writes all tables below. Catalog identity and setup (families, sub-families, manufacturers, items, VAT rates, parameters, tubing lengths) are staff pages. Django admin is not the catalog UI (users and audit only).
 - **CLI** (later slice) writes the same proforma workflow so an LLM agent can create a proforma in one shot. Not a separate store.
 
 ### CLI contract (later slice; no extra schema)
@@ -53,7 +53,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
   - `role` — enum `staff` | `admin`, required
   - `is_active` — boolean, required
 - Uniqueness: live `email`
-- Notes: maps to existing `accounts.User` (email login). Admin-provisioned; no public signup. Clients are not users. Demo manager (`staff`) may create and edit clients, sites, catalog (families, sub-families, manufacturers, items, sales prices), and proformas, and may issue/cancel; only `admin` may soft-delete clients, sites, and catalog rows.
+- Notes: maps to existing `accounts.User` (email login). Admin-provisioned; no public signup. Clients are not users. Demo manager (`staff`) may create and edit clients, sites, catalog (families, sub-families, manufacturers, items, VAT rates, sales prices, tubing lengths), parameters, and proformas, and may issue/cancel; only `admin` may soft-delete clients, sites, and catalog rows. Parameters have no delete.
 - Extra history table: no
 - Extra activity table: no
 
@@ -75,7 +75,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 ### parameters
 
 - Purpose: settings editable without a deploy
-- Written by (apps): staff web app (admin)
+- Written by (apps): staff web app (setup page, not Django admin)
 - Fields (plus always-on):
   - `key` — text, required
   - `value` — text, required
@@ -87,6 +87,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 - Reason-required: no
 - Extra history table: no
 - Extra activity table: no
+- Notes: staff may edit `value` on known keys only. No create or delete of parameter rows from the setup page.
 
 ### clients
 
@@ -164,6 +165,22 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 - Extra history table: no
 - Extra activity table: no
 
+### vat_rates
+
+- Purpose: catalog IVA lookup (warehouse-style). Staff pick a rate on each item. Not an official tax invoice table.
+- Written by (apps): staff web app (setup page)
+- Fields (plus always-on):
+  - `code` — text, required (stored uppercase, e.g. `VAT23`)
+  - `label` — text, required (e.g. `23%`)
+  - `rate` — number, required, 0–1 inclusive (fraction; staff enter percent `23`, stored `0.2300`)
+  - `is_default` — boolean, required, default false
+- Relationships: has many `items`
+- Uniqueness: live `code` (case-insensitive); at most one live row with `is_default` true
+- Reason-required fields: none
+- Extra history table: no
+- Extra activity table: no
+- Notes: start with Portugal IVA: 23% (default), 13%, 6%, Exempt (0%). New items pre-select the default rate. Quoting does not apply VAT yet; the FK is stored so a later slice can snapshot it onto lines. Do not confuse with official invoice / payment / tax tables (still rejected).
+
 ### items
 
 - Purpose: one catalog machine (indoor or outdoor); one machine per proforma line
@@ -171,23 +188,24 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 - Fields (plus always-on):
   - `sub_family` — fk → `sub_families`, required
   - `brand` — fk → `brands`, required
+  - `vat_rate` — fk → `vat_rates`, required
   - `internal_code` — text, required (stored uppercase)
   - `kind` — enum `indoor` | `outdoor`, required
   - `btu` — number, required
   - `max_volume_m3` — number, optional (room volume this unit is suitable for, up to this many cubic metres; e.g. 9000 BTU indoor → 20). Null = unknown / not applicable. For later auto-matching; not used in quoting yet.
   - `list_price` — money, required, default 0 (current **sales** price; edited only on the manufacturer pricelist)
   - `is_default` — boolean, required, default false
-- Relationships: belongs to one `sub_family` (and thus a family) and one `brand`; referenced by `proforma_lines`
+- Relationships: belongs to one `sub_family` (and thus a family), one `brand`, and one `vat_rate`; referenced by `proforma_lines`
 - Uniqueness: live `internal_code` (compared case-insensitive); at most one live `is_default` true per (`sub_family`, `brand`)
 - Reason-required fields: `list_price`
 - Extra history table: no (locked lines hold the snapshot; no catalog price-history screen)
 - Extra activity table: no
-- Notes: default indoor+outdoor matching is deferred (`model_default_matches` in a later slice). Volume-based auto-pick is deferred (field stored only). MVP quoting picks each machine on its own line. New items start at sales price 0 until priced on the manufacturer page.
+- Notes: default indoor+outdoor matching is deferred (`model_default_matches` in a later slice). Volume-based auto-pick is deferred (field stored only). MVP quoting picks each machine on its own line. New items start at sales price 0 until priced on the manufacturer page. VAT is identity on the item; line totals do not include VAT yet.
 
 ### tubing_lengths
 
 - Purpose: priced extra-tubing options when indoor and outdoor are far apart
-- Written by (apps): staff web app (admin)
+- Written by (apps): staff web app (setup page, not Django admin)
 - Fields (plus always-on):
   - `length` — number, required (metres; see `parameters.tubing_length_unit`)
   - `price` — money, required
@@ -279,7 +297,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 - Client-login / portal tables
 - Mailer / worker / job-queue tables in this slice
 - Per-app copies of shared entities
-- Official invoice / payment / tax tables
+- Official invoice / payment / tax tables (`vat_rates` on catalog items is not this)
 - Unlock or revision-chain tables for locked proformas
 
 ## Open questions

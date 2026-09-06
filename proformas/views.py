@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.http import Http404, HttpResponse
@@ -11,12 +13,27 @@ from .forms import (
     ItemForm,
     ItemPriceForm,
     NewDraftForm,
+    ParameterForm,
     ProformaHeaderForm,
     ProformaLineForm,
     SiteForm,
     SubFamilyForm,
+    TubingLengthForm,
+    VatRateForm,
 )
-from .models import Brand, Client, Family, Item, Proforma, ProformaLine, Site, SubFamily
+from .models import (
+    Brand,
+    Client,
+    Family,
+    Item,
+    Parameter,
+    Proforma,
+    ProformaLine,
+    Site,
+    SubFamily,
+    TubingLength,
+    VatRate,
+)
 from .pdf import build_proforma_pdf
 from .quote_i18n import quote_labels
 from accounts.lang import normalize_lang
@@ -314,24 +331,35 @@ def _drawer_list(
     nav_active,
     page_title,
     extra_context=None,
+    save_fn=None,
 ):
     editing = None
     form = form_class()
     if request.method == "POST":
         pk = request.POST.get("id")
         if request.POST.get("action") == "delete" and pk:
-            delete_fn(get_object_or_404(model, pk=pk), request.user)
-            return redirect(redirect_name)
-        instance = get_object_or_404(model, pk=pk) if pk else None
-        form = form_class(request.POST, instance=instance)
-        if form.is_valid():
-            obj = form.save(commit=False)
-            if isinstance(obj, Item):
-                services.save_item(obj, request.user)
+            instance = get_object_or_404(model, pk=pk)
+            try:
+                delete_fn(instance, request.user)
+            except ValidationError as exc:
+                form = form_class(instance=instance)
+                form.add_error(None, exc)
+                editing = instance
             else:
-                services.save_audited(obj, request.user)
-            return redirect(redirect_name)
-        editing = instance
+                return redirect(redirect_name)
+        else:
+            instance = get_object_or_404(model, pk=pk) if pk else None
+            form = form_class(request.POST, instance=instance)
+            if form.is_valid():
+                obj = form.save(commit=False)
+                if save_fn:
+                    save_fn(obj, request.user)
+                elif isinstance(obj, Item):
+                    services.save_item(obj, request.user)
+                else:
+                    services.save_audited(obj, request.user)
+                return redirect(redirect_name)
+            editing = instance
     elif request.GET.get("id"):
         editing = get_object_or_404(model, pk=request.GET["id"])
         form = form_class(instance=editing)
@@ -470,9 +498,9 @@ def item_list(request):
     q = request.GET.get("q", "").strip()
     family_id = request.GET.get("family", "").strip()
     brand_id = request.GET.get("brand", "").strip()
-    rows = Item.objects.select_related("sub_family__family", "brand").order_by(
-        "internal_code"
-    )
+    rows = Item.objects.select_related(
+        "sub_family__family", "brand", "vat_rate"
+    ).order_by("internal_code")
     if q:
         rows = rows.filter(internal_code__icontains=q)
     if family_id:
@@ -497,6 +525,128 @@ def item_list(request):
         nav_active="items",
         page_title="Items",
         extra_context=extra,
+    )
+
+
+@login_required
+def vat_rate_list(request):
+    q = request.GET.get("q", "").strip()
+    rows = VatRate.objects.order_by("rate")
+    if q:
+        rows = rows.filter(code__icontains=q) | rows.filter(label__icontains=q)
+        rows = rows.distinct()
+    return _drawer_list(
+        request,
+        model=VatRate,
+        form_class=VatRateForm,
+        template="proformas/vat_rate_list.html",
+        redirect_name="vat_rate_list",
+        delete_fn=services.delete_vat_rate,
+        nav_active="",
+        page_title="VAT rates",
+        extra_context={"vat_rates": rows, "q": q},
+        save_fn=services.save_vat_rate,
+    )
+
+
+@login_required
+def parameter_list(request):
+    editing = None
+    form = ParameterForm()
+    if request.method == "POST":
+        pk = request.POST.get("id")
+        if not pk or request.POST.get("action") == "delete":
+            raise Http404()
+        instance = get_object_or_404(
+            Parameter, pk=pk, key__in=services.KNOWN_PARAMETER_KEYS
+        )
+        form = ParameterForm(request.POST, instance=instance)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            services.save_parameter(obj, request.user)
+            return redirect("parameter_list")
+        editing = instance
+    elif request.GET.get("id"):
+        editing = get_object_or_404(
+            Parameter, pk=request.GET["id"], key__in=services.KNOWN_PARAMETER_KEYS
+        )
+        form = ParameterForm(instance=editing)
+
+    rows = Parameter.objects.filter(key__in=services.KNOWN_PARAMETER_KEYS).order_by(
+        "key"
+    )
+    drawer_open = bool(editing or form.errors)
+    return render(
+        request,
+        "proformas/parameter_list.html",
+        {
+            "parameters": rows,
+            "form": form,
+            "editing": editing,
+            "drawer_open": drawer_open,
+            "nav_active": "",
+            "page_title": "Parameters",
+        },
+    )
+
+
+@login_required
+def tubing_length_list(request):
+    editing = None
+    form = TubingLengthForm()
+    if request.method == "POST":
+        pk = request.POST.get("id")
+        if request.POST.get("action") == "delete" and pk:
+            instance = get_object_or_404(TubingLength, pk=pk)
+            try:
+                services.delete_tubing_length(instance, request.user)
+            except ValidationError as exc:
+                form = TubingLengthForm(instance=instance)
+                form.add_error(None, exc)
+                editing = instance
+            else:
+                return redirect("tubing_length_list")
+        else:
+            instance = get_object_or_404(TubingLength, pk=pk) if pk else None
+            form = TubingLengthForm(request.POST, instance=instance)
+            if form.is_valid():
+                obj = form.save(commit=False)
+                try:
+                    services.save_tubing_length(
+                        obj,
+                        request.user,
+                        reason=form.cleaned_data.get("reason", ""),
+                    )
+                except ValidationError as exc:
+                    form.add_error("reason", exc)
+                    editing = instance
+                else:
+                    return redirect("tubing_length_list")
+            editing = instance
+    elif request.GET.get("id"):
+        editing = get_object_or_404(TubingLength, pk=request.GET["id"])
+        form = TubingLengthForm(instance=editing)
+
+    q = request.GET.get("q", "").strip()
+    rows = TubingLength.objects.order_by("length")
+    if q:
+        try:
+            rows = rows.filter(length=Decimal(q.replace(",", ".")))
+        except InvalidOperation:
+            rows = rows.none()
+    drawer_open = bool(editing or form.errors or request.GET.get("new"))
+    return render(
+        request,
+        "proformas/tubing_length_list.html",
+        {
+            "tubing_lengths": rows,
+            "form": form,
+            "editing": editing,
+            "q": q,
+            "drawer_open": drawer_open,
+            "nav_active": "",
+            "page_title": "Tubing lengths",
+        },
     )
 
 

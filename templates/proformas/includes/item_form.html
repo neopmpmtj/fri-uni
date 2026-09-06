@@ -37,6 +37,11 @@
         {{ form.max_volume_m3.errors }}
     </label>
     <label>
+        <span data-i18n="vat">VAT</span>
+        {{ form.vat_rate }}
+        {{ form.vat_rate.errors }}
+    </label>
+    <label>
         <span>{{ form.is_default }} <span data-i18n="default">Default</span></span>
     </label>
     <div class="drawer-actions">

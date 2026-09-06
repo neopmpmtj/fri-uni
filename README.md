@@ -2,7 +2,7 @@
 
 Internal HVAC back office for creating **proforma invoices** — client quotes for equipment installation and cost, including an upfront-payment discount. Not an official finance document.
 
-> **Last updated:** 2026-09-06 16:17 WEST
+> **Last updated:** 2026-09-06 16:51 WEST
 
 ## What it does
 

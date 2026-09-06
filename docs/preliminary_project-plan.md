@@ -252,3 +252,28 @@ None.
 ### Open questions still open
 
 None.
+
+## Update 2026-09-06 — VAT on items + setup from dashboard
+
+Warehouse VAT lookup copied onto catalog items. Remaining operational config moves off Django admin onto dashboard Setup cards.
+
+### What changed
+
+- **VAT rates:** lookup table (`code`, `label`, `rate` as 0–1, `is_default`). Portugal IVA seed: 23% (default), 13%, 6%, Exempt. Required FK on each item. Staff enter percent; stored as a fraction.
+- **Items:** identity includes VAT (drawer + list column). Sales price still only on the manufacturer pricelist. Quoting/PDF do **not** apply VAT yet.
+- **Surfaces:** dashboard Setup cards now also include VAT rates, Parameters, and Tubing lengths. Django admin remains users and audit only.
+- **Parameters:** staff edit known keys only; no create/delete. Changing default discount does not rewrite issued proformas.
+- **Tubing lengths:** staff list+drawer; price change still needs a reason.
+
+### Apps added/removed
+
+None.
+
+### Decisions
+
+- Copy warehouse VAT *system*, not Mozambique 16% rates.
+- Catalog IVA is not an official tax invoice.
+
+### Open questions still open
+
+None.

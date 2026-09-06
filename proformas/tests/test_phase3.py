@@ -6,10 +6,11 @@ from django.core.management import call_command
 from django.urls import reverse
 
 from accounts.models import User
-from proformas.models import Brand, ChangeLog, Family, Item, SubFamily
+from proformas.models import Brand, ChangeLog, Family, Item, SubFamily, VatRate
 from proformas.seed import FAMILY_AC
 from proformas.services import (
     normalize_internal_code,
+    percent_to_rate,
     update_equipment_list_price,
     validate_internal_code,
 )
@@ -91,6 +92,9 @@ def test_seed_catalog_twice_does_not_duplicate():
     )
     assert indoor_9.internal_code == "DAI-SEN-I-9"
     assert indoor_9.max_volume_m3 == Decimal("20")
+    assert indoor_9.vat_rate.code == "VAT23"
+    assert VatRate.objects.filter(is_default=True).count() == 1
+    assert VatRate.objects.get(code="VAT23").rate == Decimal("0.2300")
 
 
 @pytest.mark.django_db
@@ -107,10 +111,83 @@ def test_sub_family_is_shared_across_brands():
 @pytest.mark.django_db
 def test_staff_can_open_catalog_pages(client, staff_user):
     client.force_login(staff_user)
-    for name in ("item_list", "family_list", "sub_family_list", "manufacturer_list"):
+    for name in (
+        "item_list",
+        "family_list",
+        "sub_family_list",
+        "manufacturer_list",
+        "vat_rate_list",
+        "parameter_list",
+        "tubing_length_list",
+    ):
         response = client.get(reverse(name))
         assert response.status_code == 200
     dashboard = client.get("/")
     assert b'data-i18n="items"' in dashboard.content
     assert b'data-i18n="families"' in dashboard.content
+    assert b'data-i18n="vatRates"' in dashboard.content
+    assert b'data-i18n="parameters"' in dashboard.content
+    assert b'data-i18n="tubingLengths"' in dashboard.content
     assert b"catalogAdmin" not in dashboard.content
+
+
+@pytest.mark.django_db
+def test_percent_to_rate_stores_fraction():
+    assert percent_to_rate("23") == Decimal("0.2300")
+
+
+@pytest.mark.django_db
+def test_new_item_form_preselects_default_vat(client, staff_user, indoor):
+    client.force_login(staff_user)
+    response = client.get(reverse("item_list"), {"new": "1"})
+    assert response.status_code == 200
+    assert response.context["form"].fields["vat_rate"].initial == indoor.vat_rate_id
+
+
+@pytest.mark.django_db
+def test_item_post_without_vat_rate_is_invalid(client, staff_user, indoor):
+    client.force_login(staff_user)
+    response = client.post(
+        reverse("item_list"),
+        {
+            "sub_family": indoor.sub_family_id,
+            "brand": indoor.brand_id,
+            "internal_code": "NEW-I-9",
+            "kind": Item.Kind.INDOOR,
+            "btu": "9000",
+            "action": "save",
+        },
+    )
+    assert response.status_code == 200
+    assert Item.objects.filter(internal_code="NEW-I-9").count() == 0
+    assert response.context["form"].errors.get("vat_rate")
+
+
+@pytest.mark.django_db
+def test_staff_cannot_delete_vat_rate(client, staff_user, indoor):
+    client.force_login(staff_user)
+    response = client.post(
+        reverse("vat_rate_list"),
+        {"id": str(indoor.vat_rate_id), "action": "delete"},
+    )
+    assert response.status_code == 403
+    assert VatRate.objects.filter(pk=indoor.vat_rate_id).exists()
+
+
+@pytest.mark.django_db
+def test_tubing_price_change_without_reason_fails(client, staff_user, tubing):
+    client.force_login(staff_user)
+    response = client.post(
+        reverse("tubing_length_list"),
+        {
+            "id": str(tubing.pk),
+            "length": str(tubing.length),
+            "price": "99.00",
+            "reason": "",
+            "action": "save",
+        },
+    )
+    assert response.status_code == 200
+    tubing.refresh_from_db()
+    assert tubing.price == Decimal("40.00")
+    assert response.context["form"].errors.get("reason")

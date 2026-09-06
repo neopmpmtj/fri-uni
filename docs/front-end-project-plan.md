@@ -11,7 +11,7 @@ A later agent implements UI only after the matching implementation phase. Checkb
 1. Read this file **before any staff HTML/CSS/JS**.
 2. Two layouts only: **dashboard** and **work page**. Do not invent a third shell.
 3. **Server-rendered tables + JS drawer.** Do not add a `/api/manage/` clone unless a later phase truly needs it. Warehouse items load rows via JSON APIs; fri-uni does not.
-4. Catalog identity (items) is a **staff work page**. Families, sub-families, and manufacturers are **setup pages** opened from dashboard cards. Django contrib admin is not the catalog UI (it remains for users, audit, tubing, parameters until those get cards).
+4. Catalog identity (items) is a **staff work page**. Families, sub-families, manufacturers, VAT rates, parameters, and tubing lengths are **setup pages** opened from dashboard cards. Django contrib admin is users and audit only.
 
 ## Visual tokens (light only)
 
@@ -58,7 +58,7 @@ Main (`dash-main`, max-width ~72rem):
 - App title (e.g. company / “Proformas”).
 - Two card groups:
   - **Daily** (`card-grid`): Clients, Sites, Proformas, Items.
-  - **Setup** (`card-grid`, heading “Setup”): Families, Sub-families, Manufacturers. More setup cards will be added later.
+  - **Setup** (`card-grid`, heading “Setup”): Families, Sub-families, Manufacturers, VAT rates, Parameters, Tubing lengths.
 - Do **not** put a Catalog (Django admin) card on the dashboard.
 - Cards: white surface, 8px radius, shadow; hover accent border. Title + one-line description. `data-i18n` on strings.
 
@@ -71,7 +71,7 @@ To produce an English PDF for a UK client, staff return to the dashboard, switch
 `header.topbar` (surface, bottom border):
 
 1. **Eyebrow** + page **`h1`** (warehouse `console_eyebrow.html` + title). Eyebrow can be the app name; `h1` is the screen name (Clients, Sites, …).
-2. **Nav** — Home, Clients, Sites, Proformas, Items. Active link styled (`is-active`). Home goes to the dashboard. **No language select here.** Families, sub-families, and manufacturers are **not** in the topbar; they are dashboard setup cards.
+2. **Nav** — Home, Clients, Sites, Proformas, Items. Active link styled (`is-active`). Home goes to the dashboard. **No language select here.** Setup pages are **not** in the topbar; they are dashboard setup cards.
 3. **Actions (right)** — page-specific buttons if needed, then the **gear**. No warehouse “Master data” cluster. No Help `?`.
 
 `main.page`: toolbar (filters + primary action), optional banner, `.table-wrap` > `table.grid`, optional pagination.
@@ -125,17 +125,20 @@ Only place to set language. Daily cards + Setup cards as above. Implementation: 
 Daily catalog. Light: identity only, **no sales price field**.
 
 - Toolbar: search, filter by family / manufacturer, **New item**.
-- `.grid`: code, family, sub-family, manufacturer, kind, BTU, max m³, actions. Price may show read-only; it is not edited here.
-- Drawer: family, sub-family (filtered by family), manufacturer, internal code, kind, BTU, max volume m³ (optional), default checkbox.
+- `.grid`: code, family, sub-family, manufacturer, kind, BTU, max m³, VAT, actions. Price may show read-only; it is not edited here.
+- Drawer: family, sub-family (filtered by family), manufacturer, internal code, kind, BTU, max volume m³ (optional), VAT (required; new item pre-selects the default rate), default checkbox.
 - Soft-delete in the drawer (admin only).
 
-### Families / Sub-families / Manufacturers (setup pages)
+### Families / Sub-families / Manufacturers / VAT / Parameters / Tubing (setup pages)
 
 Same list+drawer chrome. Opened from dashboard setup cards only.
 
 - **Families:** name, default.
 - **Sub-families:** family, name, default; filter by family.
 - **Manufacturers:** name, default. Row opens that brand’s **sales pricelist** (items + sales price). Edit price in a drawer with a **reason**. This is our sales price, not a supplier cost.
+- **VAT rates:** code, label, percent (stored as 0–1), default. Soft-delete admin only.
+- **Parameters:** known keys only; edit `value`. No New / Delete.
+- **Tubing lengths:** length, price (reason required on price change). Soft-delete admin only.
 
 Do **not** nest Families / Sub-families as a Master-data cluster on the Items page.
 
@@ -221,3 +224,4 @@ Document-like page for the client-facing quote (snapshots, line table, totals, o
 - [x] Front-end: Items list + drawer (no price) (completed 2026-09-06)
 - [x] Front-end: Families / Sub-families / Manufacturers setup pages + pricelist (completed 2026-09-06)
 - [x] Front-end: line drawer Family → Sub-family → Manufacturer → Item with defaults (completed 2026-09-06)
+- [x] Front-end: VAT on Items + Setup cards for VAT rates, Parameters, Tubing (completed 2026-09-06)

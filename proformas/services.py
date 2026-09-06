@@ -5,6 +5,13 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from decimal import Decimal
+import re
+
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import transaction
+from django.utils import timezone
+
 from .models import (
     ActivityLog,
     ActorType,
@@ -15,6 +22,7 @@ from .models import (
     ProformaLine,
     SubFamily,
     TubingLength,
+    VatRate,
 )
 from .pdf import build_proforma_pdf  # noqa: F401
 
@@ -63,6 +71,13 @@ def log_activity(
         created_by=actor,
         updated_by=actor,
     )
+
+
+KNOWN_PARAMETER_KEYS = (
+    "currency",
+    "default_upfront_discount_percent",
+    "tubing_length_unit",
+)
 
 
 def get_parameter(key, default=None):
@@ -309,7 +324,22 @@ def delete_item(item, user):
     item.soft_delete(user)
 
 
+def delete_vat_rate(vat_rate, user):
+    require_delete_permission(user)
+    if Item.objects.filter(vat_rate=vat_rate).exists():
+        raise ValidationError("Cannot delete a VAT rate that is used by items.")
+    vat_rate.soft_delete(user)
+
+
+def delete_tubing_length(tubing, user):
+    require_delete_permission(user)
+    if ProformaLine.objects.filter(tubing_length=tubing).exists():
+        raise ValidationError("Cannot delete a tubing length that is used on a proforma.")
+    tubing.soft_delete(user)
+
+
 INTERNAL_CODE_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
+VAT_CODE_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
 def normalize_internal_code(internal_code):
@@ -333,7 +363,7 @@ def validate_internal_code(internal_code, *, exclude_item_id=None):
 
 
 def _clear_other_defaults(instance):
-    if not instance.is_default:
+    if not getattr(instance, "is_default", False):
         return
     model = type(instance)
     qs = model.objects.filter(is_default=True)
@@ -344,6 +374,33 @@ def _clear_other_defaults(instance):
     elif isinstance(instance, Item):
         qs = qs.filter(sub_family_id=instance.sub_family_id, brand_id=instance.brand_id)
     qs.update(is_default=False)
+
+
+def percent_to_rate(percent):
+    value = Decimal(str(percent))
+    if value < 0 or value > 100:
+        raise ValidationError("VAT percent must be between 0 and 100.")
+    return (value / Decimal("100")).quantize(Decimal("0.0001"))
+
+
+def normalize_vat_code(code):
+    return (code or "").strip().upper()
+
+
+def validate_vat_code(code, *, exclude_id=None):
+    normalized = normalize_vat_code(code)
+    if not normalized:
+        raise ValidationError("VAT code is required.")
+    if VAT_CODE_PATTERN.fullmatch(normalized) is None:
+        raise ValidationError(
+            "VAT code may only contain letters, digits, dots, hyphens, and underscores."
+        )
+    qs = VatRate.objects.filter(code__iexact=normalized)
+    if exclude_id:
+        qs = qs.exclude(pk=exclude_id)
+    if qs.exists():
+        raise ValidationError(f'VAT code "{normalized}" is already used.')
+    return normalized
 
 
 @transaction.atomic
@@ -361,6 +418,29 @@ def save_item(item, user):
         item.internal_code, exclude_item_id=item.pk
     )
     return save_audited(item, user)
+
+
+def save_vat_rate(vat_rate, user):
+    vat_rate.code = validate_vat_code(vat_rate.code, exclude_id=vat_rate.pk)
+    return save_audited(vat_rate, user)
+
+
+@transaction.atomic
+def save_tubing_length(tubing, user, *, reason=""):
+    new_length = tubing.length
+    new_price = tubing.price
+    if tubing.pk:
+        original = TubingLength.all_objects.get(pk=tubing.pk)
+        if original.price != new_price:
+            update_tubing_price(original, new_price, reason=reason, actor=user)
+            tubing.refresh_from_db()
+        tubing.length = new_length
+        tubing.price = new_price
+    return save_audited(tubing, user)
+
+
+def save_parameter(parameter, user):
+    return save_audited(parameter, user)
 
 
 def issue_proforma(proforma, user):

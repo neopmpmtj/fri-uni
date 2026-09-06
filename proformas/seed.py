@@ -11,6 +11,7 @@ from proformas.models import (
     Site,
     SubFamily,
     TubingLength,
+    VatRate,
 )
 from proformas.services import add_line, cancel_proforma, create_draft, issue_proforma
 
@@ -88,6 +89,12 @@ PARAMETERS = (
     ("currency", "EUR"),
     ("default_upfront_discount_percent", "10"),
     ("tubing_length_unit", "m"),
+)
+VAT_RATES = (
+    ("VAT23", "23%", "0.2300", True),
+    ("VAT13", "13%", "0.1300", False),
+    ("VAT6", "6%", "0.0600", False),
+    ("VAT_EXEMPT", "Exempt", "0.0000", False),
 )
 
 DEMO_ADMIN_EMAIL = "proforma-admin@fribila.dev"
@@ -173,13 +180,14 @@ def _item_code(brand_name, sub_family_name, kind, btu):
     return f"{brand}-{sub}-{kind_ch}-{btu // 1000}"
 
 
-def _seed_capacity_items(brand, sub_family, indoor_prices, outdoor_prices):
+def _seed_capacity_items(brand, sub_family, indoor_prices, outdoor_prices, vat_rate):
     for btu in BTUS:
         indoor_defaults = {
             "list_price": Decimal(indoor_prices[btu]),
             "internal_code": _item_code(
                 brand.name, sub_family.name, Item.Kind.INDOOR, btu
             ),
+            "vat_rate": vat_rate,
         }
         if btu == 9000:
             indoor_defaults["max_volume_m3"] = Decimal("20")
@@ -198,6 +206,7 @@ def _seed_capacity_items(brand, sub_family, indoor_prices, outdoor_prices):
                 "internal_code": _item_code(
                     brand.name, sub_family.name, Item.Kind.OUTDOOR, btu
                 ),
+                "vat_rate": vat_rate,
             },
             brand=brand,
             sub_family=sub_family,
@@ -207,6 +216,20 @@ def _seed_capacity_items(brand, sub_family, indoor_prices, outdoor_prices):
 
 
 def seed_catalog():
+    vat23 = None
+    for code, label, rate, is_default in VAT_RATES:
+        vat, _ = _live_get_or_create(
+            VatRate,
+            defaults={
+                "label": label,
+                "rate": Decimal(rate),
+                "is_default": is_default,
+            },
+            code=code,
+        )
+        if code == "VAT23":
+            vat23 = vat
+
     ac, _ = _live_get_or_create(Family, defaults={"is_default": True}, name=FAMILY_AC)
     _live_get_or_create(Family, name=FAMILY_UNDERFLOOR)
     _live_get_or_create(Family, name=FAMILY_DHW)
@@ -220,7 +243,7 @@ def seed_catalog():
     for name in SIMPLE_BRANDS:
         brand, _ = _live_get_or_create(Brand, name=name)
         _seed_capacity_items(
-            brand, sub_by_name[SIMPLE_SUBFAMILY], INDOOR_PRICES, OUTDOOR_PRICES
+            brand, sub_by_name[SIMPLE_SUBFAMILY], INDOOR_PRICES, OUTDOOR_PRICES, vat23
         )
 
     daikin, _ = _live_get_or_create(Brand, name="Daikin")
@@ -230,6 +253,7 @@ def seed_catalog():
             sub_by_name[sub_name],
             DAIKIN_INDOOR[sub_name],
             DAIKIN_OUTDOOR[sub_name],
+            vat23,
         )
 
     for length, price in TUBING:

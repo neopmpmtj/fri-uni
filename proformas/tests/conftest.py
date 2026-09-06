@@ -12,6 +12,7 @@ from proformas.models import (
     Site,
     SubFamily,
     TubingLength,
+    VatRate,
 )
 
 
@@ -36,9 +37,18 @@ def indoor(db):
     family = Family.objects.create(name="Air conditioners", is_default=True)
     sub = SubFamily.objects.create(family=family, name="Split", is_default=True)
     brand = Brand.objects.create(name="Mitsu")
+    vat, _ = VatRate.objects.get_or_create(
+        code="VAT23",
+        defaults={
+            "label": "23%",
+            "rate": Decimal("0.2300"),
+            "is_default": True,
+        },
+    )
     return Item.objects.create(
         sub_family=sub,
         brand=brand,
+        vat_rate=vat,
         internal_code="MIT-SPL-I-9",
         kind=Item.Kind.INDOOR,
         btu=9000,

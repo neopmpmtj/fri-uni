@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q, UniqueConstraint
 from django.db.models.functions import Lower
@@ -182,6 +185,44 @@ class SubFamily(AuditedModel):
         return f"{self.family.name} / {self.name}"
 
 
+class VatRate(AuditedModel):
+    """Catalog IVA lookup (data-points table `vat_rates`)."""
+
+    code = models.CharField(max_length=32)
+    label = models.CharField(max_length=64)
+    rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
+    is_default = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["rate"]
+        constraints = [
+            UniqueConstraint(
+                Lower("code"),
+                condition=Q(deleted_at__isnull=True),
+                name="uniq_live_vat_rate_code_ci",
+            ),
+            UniqueConstraint(
+                fields=["is_default"],
+                condition=Q(deleted_at__isnull=True, is_default=True),
+                name="uniq_live_default_vat_rate",
+            ),
+            models.CheckConstraint(
+                condition=Q(rate__gte=0, rate__lte=1),
+                name="vat_rate_gte_zero_lte_one",
+            ),
+        ]
+
+    def __str__(self):
+        return self.label
+
+    def as_percent(self):
+        return (self.rate * 100).quantize(Decimal("0.01"))
+
+
 class Item(AuditedModel):
     """Catalog machine (data-points table `items`)."""
 
@@ -193,6 +234,9 @@ class Item(AuditedModel):
         SubFamily, on_delete=models.PROTECT, related_name="items"
     )
     brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name="items")
+    vat_rate = models.ForeignKey(
+        VatRate, on_delete=models.PROTECT, related_name="items"
+    )
     internal_code = models.CharField(max_length=64)
     kind = models.CharField(max_length=16, choices=Kind.choices)
     btu = models.IntegerField()

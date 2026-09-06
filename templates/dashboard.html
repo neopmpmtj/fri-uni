@@ -56,6 +56,18 @@
                 <h2 data-i18n="manufacturers">Manufacturers</h2>
                 <p data-i18n="manufacturersDesc">Brands and sales pricelists.</p>
             </a>
+            <a class="dash-card" href="{% url 'vat_rate_list' %}">
+                <h2 data-i18n="vatRates">VAT rates</h2>
+                <p data-i18n="vatRatesDesc">IVA rates for catalog items.</p>
+            </a>
+            <a class="dash-card" href="{% url 'parameter_list' %}">
+                <h2 data-i18n="parameters">Parameters</h2>
+                <p data-i18n="parametersDesc">Currency, default discount, tubing unit.</p>
+            </a>
+            <a class="dash-card" href="{% url 'tubing_length_list' %}">
+                <h2 data-i18n="tubingLengths">Tubing lengths</h2>
+                <p data-i18n="tubingLengthsDesc">Priced extra-tubing options.</p>
+            </a>
         </div>
     </main>
     <script src="{% static 'js/dashboard.js' %}?v=1" defer></script>
