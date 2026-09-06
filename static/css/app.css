@@ -110,6 +110,14 @@ textarea {
     color: var(--text);
 }
 
+input:disabled,
+select:disabled,
+textarea:disabled {
+    background: var(--surface-2);
+    color: var(--muted);
+    cursor: not-allowed;
+}
+
 .form-error {
     color: #9b1c1c;
 }

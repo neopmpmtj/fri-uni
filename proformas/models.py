@@ -156,10 +156,17 @@ class Family(AuditedModel):
 
 
 class SubFamily(AuditedModel):
-    """Named range under a family (was Style). Not owned by a brand."""
+    """Named range under a family (was Style). Optional manufacturer."""
 
     family = models.ForeignKey(
         Family, on_delete=models.PROTECT, related_name="sub_families"
+    )
+    brand = models.ForeignKey(
+        Brand,
+        on_delete=models.PROTECT,
+        related_name="owned_sub_families",
+        null=True,
+        blank=True,
     )
     name = models.CharField(max_length=128)
     is_default = models.BooleanField(default=False)
@@ -183,6 +190,27 @@ class SubFamily(AuditedModel):
 
     def __str__(self):
         return f"{self.family.name} / {self.name}"
+
+
+class Power(AuditedModel):
+    """Catalog power rating (data-points table `powers`)."""
+
+    power = models.DecimalField(max_digits=12, decimal_places=2)
+    unit = models.CharField(max_length=32)
+
+    class Meta:
+        ordering = ["power", "unit"]
+        constraints = [
+            UniqueConstraint(
+                "power",
+                Lower("unit"),
+                condition=Q(deleted_at__isnull=True),
+                name="uniq_live_power_unit_ci",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.power} {self.unit}"
 
 
 class VatRate(AuditedModel):
@@ -239,7 +267,9 @@ class Item(AuditedModel):
     )
     internal_code = models.CharField(max_length=64)
     kind = models.CharField(max_length=16, choices=Kind.choices)
-    btu = models.IntegerField()
+    power = models.ForeignKey(
+        Power, on_delete=models.PROTECT, related_name="items"
+    )
     max_volume_m3 = models.DecimalField(
         max_digits=8, decimal_places=2, null=True, blank=True
     )
@@ -261,7 +291,10 @@ class Item(AuditedModel):
         ]
 
     def __str__(self):
-        return f"{self.internal_code} — {self.sub_family.name} {self.kind} {self.btu}"
+        return (
+            f"{self.internal_code} — {self.sub_family.name} "
+            f"{self.kind} {self.power}"
+        )
 
 
 class TubingLength(AuditedModel):
@@ -354,7 +387,10 @@ class ProformaLine(AuditedModel):
     sub_family_name = models.CharField(max_length=128, blank=True)
     internal_code = models.CharField(max_length=64, blank=True)
     kind = models.CharField(max_length=16, blank=True)
-    btu = models.IntegerField(null=True, blank=True)
+    power_value = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+    power_unit = models.CharField(max_length=32, blank=True)
     tubing_length_value = models.DecimalField(
         max_digits=8, decimal_places=2, null=True, blank=True
     )

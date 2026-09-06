@@ -5,19 +5,13 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from decimal import Decimal
-import re
-
-from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import transaction
-from django.utils import timezone
-
 from .models import (
     ActivityLog,
     ActorType,
     ChangeLog,
     Item,
     Parameter,
+    Power,
     Proforma,
     ProformaLine,
     SubFamily,
@@ -331,6 +325,13 @@ def delete_vat_rate(vat_rate, user):
     vat_rate.soft_delete(user)
 
 
+def delete_power(power, user):
+    require_delete_permission(user)
+    if Item.objects.filter(power=power).exists():
+        raise ValidationError("Cannot delete a power rating that is used by items.")
+    power.soft_delete(user)
+
+
 def delete_tubing_length(tubing, user):
     require_delete_permission(user)
     if ProformaLine.objects.filter(tubing_length=tubing).exists():
@@ -403,6 +404,22 @@ def validate_vat_code(code, *, exclude_id=None):
     return normalized
 
 
+def normalize_power_unit(unit):
+    return (unit or "").strip()
+
+
+def validate_power_uniqueness(power, unit, *, exclude_id=None):
+    normalized_unit = normalize_power_unit(unit)
+    if not normalized_unit:
+        raise ValidationError("Unit is required.")
+    qs = Power.objects.filter(power=power, unit__iexact=normalized_unit)
+    if exclude_id:
+        qs = qs.exclude(pk=exclude_id)
+    if qs.exists():
+        raise ValidationError(f'Power "{power} {normalized_unit}" already exists.')
+    return normalized_unit
+
+
 @transaction.atomic
 def save_audited(instance, user):
     _clear_other_defaults(instance)
@@ -423,6 +440,13 @@ def save_item(item, user):
 def save_vat_rate(vat_rate, user):
     vat_rate.code = validate_vat_code(vat_rate.code, exclude_id=vat_rate.pk)
     return save_audited(vat_rate, user)
+
+
+def save_power(power, user):
+    power.unit = validate_power_uniqueness(
+        power.power, power.unit, exclude_id=power.pk
+    )
+    return save_audited(power, user)
 
 
 @transaction.atomic
@@ -460,14 +484,15 @@ def issue_proforma(proforma, user):
     proforma.site_city = site.city or ""
     proforma.site_notes = site.notes or ""
     for line in proforma.lines.select_related(
-        "item__sub_family__family", "item__brand", "tubing_length"
+        "item__sub_family__family", "item__brand", "item__power", "tubing_length"
     ):
         line.brand_name = line.item.brand.name
         line.family_name = line.item.sub_family.family.name
         line.sub_family_name = line.item.sub_family.name
         line.internal_code = line.item.internal_code
         line.kind = line.item.kind
-        line.btu = line.item.btu
+        line.power_value = line.item.power.power
+        line.power_unit = line.item.power.unit
         line.tubing_length_value = (
             line.tubing_length.length if line.tubing_length_id else None
         )

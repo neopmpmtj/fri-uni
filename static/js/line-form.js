@@ -47,6 +47,18 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    function lockManufacturer() {
+        const selected = subFamily.options[subFamily.selectedIndex];
+        const brandId =
+            selected && selected.value ? selected.getAttribute("data-brand") || "" : "";
+        if (brandId) {
+            manufacturer.value = brandId;
+            manufacturer.disabled = true;
+        } else {
+            manufacturer.disabled = false;
+        }
+    }
+
     function sync(applyDefaults) {
         const familyId = optionValue(family);
         filterSelect(subFamily, function (opt) {
@@ -58,6 +70,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 subFamily.value = fallback.value;
             }
         }
+        lockManufacturer();
         const subId = optionValue(subFamily);
         const brandId = optionValue(manufacturer);
         filterSelect(item, function (opt) {

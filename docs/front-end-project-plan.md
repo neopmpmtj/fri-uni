@@ -58,7 +58,7 @@ Main (`dash-main`, max-width ~72rem):
 - App title (e.g. company / “Proformas”).
 - Two card groups:
   - **Daily** (`card-grid`): Clients, Sites, Proformas, Items.
-  - **Setup** (`card-grid`, heading “Setup”): Families, Sub-families, Manufacturers, VAT rates, Parameters, Tubing lengths.
+  - **Setup** (`card-grid`, heading “Setup”): Families, Sub-families, Manufacturers, VAT rates, Powers, Parameters, Tubing lengths.
 - Do **not** put a Catalog (Django admin) card on the dashboard.
 - Cards: white surface, 8px radius, shadow; hover accent border. Title + one-line description. `data-i18n` on strings.
 
@@ -126,7 +126,8 @@ Daily catalog. Light: identity only, **no sales price field**.
 
 - Toolbar: search, filter by family / manufacturer, **New item**.
 - `.grid`: code, family, sub-family, manufacturer, kind, BTU, max m³, VAT, actions. Price may show read-only; it is not edited here.
-- Drawer: family, sub-family (filtered by family), manufacturer, internal code, kind, BTU, max volume m³ (optional), VAT (required; new item pre-selects the default rate), default checkbox.
+- Drawer: family, sub-family (filtered by family), manufacturer, internal code, kind, **power** (dropdown from setup lookup), max volume m³ (optional), VAT (required; new item pre-selects the default rate), default checkbox.
+- If the chosen sub-family has a manufacturer, that field is filled and **visible but inactive**. If the sub-family has none, manufacturer stays editable.
 - Soft-delete in the drawer (admin only).
 
 ### Families / Sub-families / Manufacturers / VAT / Parameters / Tubing (setup pages)
@@ -134,9 +135,10 @@ Daily catalog. Light: identity only, **no sales price field**.
 Same list+drawer chrome. Opened from dashboard setup cards only.
 
 - **Families:** name, default.
-- **Sub-families:** family, name, default; filter by family.
+- **Sub-families:** family, name, optional manufacturer, default; filter by family. Empty manufacturer = shared range.
 - **Manufacturers:** name, default. Row opens that brand’s **sales pricelist** (items + sales price). Edit price in a drawer with a **reason**. This is our sales price, not a supplier cost.
 - **VAT rates:** code, label, percent (stored as 0–1), default. Soft-delete admin only.
+- **Powers:** power, unit. Soft-delete admin only if unused.
 - **Parameters:** known keys only; edit `value`. No New / Delete.
 - **Tubing lengths:** length, price (reason required on price change). Soft-delete admin only.
 
@@ -174,7 +176,7 @@ Analog of a warehouse **console**, not a Django form wizard.
 
 - Header **on the page** (not in a drawer): upfront discount %, extra labour, observations; live totals; **Issue** / **Cancel** when allowed (Phase 6).
 - Lines: `.grid` (item snapshot or live catalog name while draft, qty, tubing, line total).
-- **Add line / Edit line = drawer:** Family → Sub-family → Manufacturer → Item (defaults pre-selected), quantity, extra tubing boolean, tubing length when needed.
+- **Add line / Edit line = drawer:** Family → Sub-family → Manufacturer → Item (defaults pre-selected), quantity, extra tubing boolean, tubing length when needed. If the sub-family has a manufacturer, that control is filled and inactive.
 - Draft: editable. Issued: read-only header and lines; buttons **View quote** and **Download PDF** (Phase 7). Cancelled: read-only, no unlock.
 - Implementation: Phases 5–6 (PDF buttons Phase 7).
 

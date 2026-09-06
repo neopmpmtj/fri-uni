@@ -18,6 +18,7 @@ urlpatterns = [
         views.manufacturer_pricelist,
         name="manufacturer_pricelist",
     ),
+    path("powers/", views.power_list, name="power_list"),
     path("vat-rates/", views.vat_rate_list, name="vat_rate_list"),
     path("parameters/", views.parameter_list, name="parameter_list"),
     path("tubing-lengths/", views.tubing_length_list, name="tubing_length_list"),

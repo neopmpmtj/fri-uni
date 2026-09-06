@@ -7,6 +7,7 @@ from proformas.models import (
     Family,
     Item,
     Parameter,
+    Power,
     Proforma,
     Site,
     SubFamily,
@@ -173,23 +174,37 @@ def _live_get_or_create(model, defaults=None, **lookup):
     return model.objects.create(**data), True
 
 
-def _item_code(brand_name, sub_family_name, kind, btu):
+def _item_code(brand_name, sub_family_name, kind, power_amount):
     brand = BRAND_CODE.get(brand_name, brand_name[:3].upper())
     sub = SUBFAMILY_CODE.get(sub_family_name, sub_family_name[:3].upper())
     kind_ch = "I" if kind == Item.Kind.INDOOR else "O"
-    return f"{brand}-{sub}-{kind_ch}-{btu // 1000}"
+    return f"{brand}-{sub}-{kind_ch}-{int(power_amount) // 1000}"
 
 
-def _seed_capacity_items(brand, sub_family, indoor_prices, outdoor_prices, vat_rate):
-    for btu in BTUS:
+def _seed_powers():
+    by_amount = {}
+    for amount in BTUS:
+        row, _ = _live_get_or_create(
+            Power, power=Decimal(amount), unit="BTU"
+        )
+        by_amount[amount] = row
+    return by_amount
+
+
+def _seed_capacity_items(
+    brand, sub_family, indoor_prices, outdoor_prices, vat_rate, powers_by_amount
+):
+    for amount in BTUS:
+        power = powers_by_amount[amount]
         indoor_defaults = {
-            "list_price": Decimal(indoor_prices[btu]),
+            "list_price": Decimal(indoor_prices[amount]),
             "internal_code": _item_code(
-                brand.name, sub_family.name, Item.Kind.INDOOR, btu
+                brand.name, sub_family.name, Item.Kind.INDOOR, amount
             ),
             "vat_rate": vat_rate,
+            "power": power,
         }
-        if btu == 9000:
+        if amount == 9000:
             indoor_defaults["max_volume_m3"] = Decimal("20")
         _live_get_or_create(
             Item,
@@ -197,21 +212,22 @@ def _seed_capacity_items(brand, sub_family, indoor_prices, outdoor_prices, vat_r
             brand=brand,
             sub_family=sub_family,
             kind=Item.Kind.INDOOR,
-            btu=btu,
+            power=power,
         )
         _live_get_or_create(
             Item,
             defaults={
-                "list_price": Decimal(outdoor_prices[btu]),
+                "list_price": Decimal(outdoor_prices[amount]),
                 "internal_code": _item_code(
-                    brand.name, sub_family.name, Item.Kind.OUTDOOR, btu
+                    brand.name, sub_family.name, Item.Kind.OUTDOOR, amount
                 ),
                 "vat_rate": vat_rate,
+                "power": power,
             },
             brand=brand,
             sub_family=sub_family,
             kind=Item.Kind.OUTDOOR,
-            btu=btu,
+            power=power,
         )
 
 
@@ -230,23 +246,41 @@ def seed_catalog():
         if code == "VAT23":
             vat23 = vat
 
+    powers_by_amount = _seed_powers()
+
     ac, _ = _live_get_or_create(Family, defaults={"is_default": True}, name=FAMILY_AC)
     _live_get_or_create(Family, name=FAMILY_UNDERFLOOR)
     _live_get_or_create(Family, name=FAMILY_DHW)
 
+    daikin, _ = _live_get_or_create(Brand, name="Daikin")
     sub_by_name = {}
     for name in AC_SUBFAMILIES:
         defaults = {"is_default": name == SIMPLE_SUBFAMILY}
-        sub, _ = _live_get_or_create(SubFamily, defaults=defaults, family=ac, name=name)
+        if name in DAIKIN_SUBFAMILIES:
+            defaults["brand"] = daikin
+        sub, created = _live_get_or_create(
+            SubFamily, defaults=defaults, family=ac, name=name
+        )
+        if (
+            not created
+            and name in DAIKIN_SUBFAMILIES
+            and sub.brand_id != daikin.pk
+        ):
+            sub.brand = daikin
+            sub.save(update_fields=["brand"])
         sub_by_name[name] = sub
 
     for name in SIMPLE_BRANDS:
         brand, _ = _live_get_or_create(Brand, name=name)
         _seed_capacity_items(
-            brand, sub_by_name[SIMPLE_SUBFAMILY], INDOOR_PRICES, OUTDOOR_PRICES, vat23
+            brand,
+            sub_by_name[SIMPLE_SUBFAMILY],
+            INDOOR_PRICES,
+            OUTDOOR_PRICES,
+            vat23,
+            powers_by_amount,
         )
 
-    daikin, _ = _live_get_or_create(Brand, name="Daikin")
     for sub_name in DAIKIN_SUBFAMILIES:
         _seed_capacity_items(
             daikin,
@@ -254,6 +288,7 @@ def seed_catalog():
             DAIKIN_INDOOR[sub_name],
             DAIKIN_OUTDOOR[sub_name],
             vat23,
+            powers_by_amount,
         )
 
     for length, price in TUBING:
@@ -287,12 +322,13 @@ def _ensure_user(email, password, *, role, is_superuser=False, reset_password=Fa
     return User.objects.create_user(email=email, password=password, role=role)
 
 
-def _catalog_item(brand, sub_family, kind, btu):
+def _catalog_item(brand, sub_family, kind, power_amount):
     return Item.objects.get(
         brand__name=brand,
         sub_family__name=sub_family,
         kind=kind,
-        btu=btu,
+        power__power=Decimal(power_amount),
+        power__unit="BTU",
     )
 
 

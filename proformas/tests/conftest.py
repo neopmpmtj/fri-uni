@@ -9,6 +9,7 @@ from proformas.models import (
     Family,
     Item,
     Parameter,
+    Power,
     Site,
     SubFamily,
     TubingLength,
@@ -45,13 +46,16 @@ def indoor(db):
             "is_default": True,
         },
     )
+    power, _ = Power.objects.get_or_create(
+        power=Decimal("9000"), unit="BTU"
+    )
     return Item.objects.create(
         sub_family=sub,
         brand=brand,
         vat_rate=vat,
+        power=power,
         internal_code="MIT-SPL-I-9",
         kind=Item.Kind.INDOOR,
-        btu=9000,
         max_volume_m3=Decimal("20"),
         list_price=Decimal("500.00"),
     )

@@ -277,3 +277,48 @@ None.
 ### Open questions still open
 
 None.
+
+## Update 2026-09-06 — optional manufacturer on sub-family
+
+Sub-families may optionally point at one manufacturer so New item can lock that field.
+
+### What changed
+
+- **Sub-family:** optional `brand`. Named Daikin ranges (Perfera, Sensira, …) are seeded with Daikin. Split stays shared (no manufacturer).
+- **New/Edit item:** choosing a sub-family with a manufacturer fills Manufacturer and disables the control. Split still requires staff to pick a manufacturer.
+- **Line drawer:** same lock when the sub-family has a manufacturer.
+- Item still has its own required manufacturer FK.
+
+### Apps added/removed
+
+None.
+
+### Decisions
+
+- Manufacturer on sub-family is optional, not required. Do not split Split into per-brand rows.
+
+### Open questions still open
+
+None.
+
+## Update 2026-09-06 — power ratings lookup
+
+Replace raw BTU on items with a `powers` setup lookup (`power` + `unit`).
+
+### What changed
+
+- **Powers:** setup page + dashboard card. Seed: 9000 / 12000 / 18000 BTU.
+- **Items:** required FK to `powers`; New item uses a dropdown.
+- **Issued lines:** snapshot `power_value` + `power_unit` instead of `btu`.
+
+### Apps added/removed
+
+None.
+
+### Decisions
+
+- kW and other units can be added later via the same lookup table.
+
+### Open questions still open
+
+None.

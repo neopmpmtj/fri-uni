@@ -131,7 +131,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 - Fields (plus always-on):
   - `name` — text, required
   - `is_default` — boolean, required, default false
-- Relationships: has many `items`; owns the **sales pricelist** (each item’s `list_price`)
+- Relationships: has many `items`; may own named `sub_families`; owns the **sales pricelist** (each item’s `list_price`)
 - Uniqueness: live `name`; at most one live row with `is_default` true
 - Reason-required fields: none (sales prices live on `items`)
 - Extra history table: no
@@ -153,17 +153,33 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 
 ### sub_families
 
-- Purpose: named range under a family (e.g. Sensira, Split). Not owned by a brand; the same sub-family may be used by any manufacturer.
+- Purpose: named range under a family (e.g. Sensira, Split). May optionally belong to one manufacturer (e.g. Perfera → Daikin). Shared ranges such as Split leave manufacturer blank so any brand can use them.
 - Written by (apps): staff web app (setup page)
 - Fields (plus always-on):
   - `family` — fk → `families`, required
+  - `brand` — fk → `brands`, optional (null = shared across manufacturers)
   - `name` — text, required
   - `is_default` — boolean, required, default false
-- Relationships: belongs to one `family`; has many `items`
+- Relationships: belongs to one `family`; optionally one `brand`; has many `items`
 - Uniqueness: live `name` per `family` (name case-insensitive); at most one live `is_default` true per family
 - Reason-required fields: none
 - Extra history table: no
 - Extra activity table: no
+- Notes: if `brand` is set, New/Edit item fills manufacturer from the sub-family and the control is visible but inactive. If blank, staff pick manufacturer on the item. Item still has its own required `brand` FK.
+
+### powers
+
+- Purpose: standard catalog power ratings (AC BTU today; kW and other units later)
+- Written by (apps): staff web app (setup page)
+- Fields (plus always-on):
+  - `power` — number, required (e.g. `9000`, `2.5`)
+  - `unit` — text, required (e.g. `BTU`, `kW`; stored trimmed)
+- Relationships: has many `items`
+- Uniqueness: live (`power`, `unit`) with unit compared case-insensitive
+- Reason-required fields: none
+- Extra history table: no
+- Extra activity table: no
+- Notes: seed starts with 9000 / 12000 / 18000 BTU. New item picks a row from this lookup instead of typing a number.
 
 ### vat_rates
 
@@ -191,16 +207,16 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
   - `vat_rate` — fk → `vat_rates`, required
   - `internal_code` — text, required (stored uppercase)
   - `kind` — enum `indoor` | `outdoor`, required
-  - `btu` — number, required
+  - `power` — fk → `powers`, required
   - `max_volume_m3` — number, optional (room volume this unit is suitable for, up to this many cubic metres; e.g. 9000 BTU indoor → 20). Null = unknown / not applicable. For later auto-matching; not used in quoting yet.
   - `list_price` — money, required, default 0 (current **sales** price; edited only on the manufacturer pricelist)
   - `is_default` — boolean, required, default false
-- Relationships: belongs to one `sub_family` (and thus a family), one `brand`, and one `vat_rate`; referenced by `proforma_lines`
+- Relationships: belongs to one `sub_family` (and thus a family), one `brand`, one `vat_rate`, and one `power`; referenced by `proforma_lines`
 - Uniqueness: live `internal_code` (compared case-insensitive); at most one live `is_default` true per (`sub_family`, `brand`)
 - Reason-required fields: `list_price`
 - Extra history table: no (locked lines hold the snapshot; no catalog price-history screen)
 - Extra activity table: no
-- Notes: default indoor+outdoor matching is deferred (`model_default_matches` in a later slice). Volume-based auto-pick is deferred (field stored only). MVP quoting picks each machine on its own line. New items start at sales price 0 until priced on the manufacturer page. VAT is identity on the item; line totals do not include VAT yet.
+- Notes: default indoor+outdoor matching is deferred (`model_default_matches` in a later slice). Volume-based auto-pick is deferred (field stored only). MVP quoting picks each machine on its own line. New items start at sales price 0 until priced on the manufacturer page. VAT is identity on the item; line totals do not include VAT yet. When the parent sub-family has a manufacturer, the item’s `brand` is copied from that sub-family and cannot be chosen independently.
 
 ### tubing_lengths
 
@@ -275,7 +291,8 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
     - `sub_family_name` — text
     - `internal_code` — text
     - `kind` — enum `indoor` | `outdoor`
-    - `btu` — number
+    - `power_value` — number (snapshot of catalog power at issue)
+    - `power_unit` — text (snapshot of catalog unit at issue)
     - `tubing_length_value` — number, optional (metres; 0 or null when no extra tubing)
 - Relationships: belongs to one `proforma`; points at one `item`; optional `tubing_length`
 - Uniqueness: none (same item may appear on more than one line)

@@ -7,13 +7,19 @@ from .models import (
     Family,
     Item,
     Parameter,
+    Power,
     ProformaLine,
     Site,
     SubFamily,
     TubingLength,
     VatRate,
 )
-from .services import percent_to_rate, validate_internal_code, validate_vat_code
+from .services import (
+    percent_to_rate,
+    validate_internal_code,
+    validate_power_uniqueness,
+    validate_vat_code,
+)
 
 
 class ClientForm(forms.ModelForm):
@@ -76,6 +82,8 @@ class DataDefaultSelect(forms.Select):
             option["attrs"]["data-default"] = "1"
         if isinstance(instance, SubFamily):
             option["attrs"]["data-family"] = str(instance.family_id)
+            if instance.brand_id:
+                option["attrs"]["data-brand"] = str(instance.brand_id)
         if isinstance(instance, Item):
             option["attrs"]["data-sub-family"] = str(instance.sub_family_id)
             option["attrs"]["data-brand"] = str(instance.brand_id)
@@ -100,16 +108,16 @@ class ProformaLineForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        items = Item.objects.select_related("sub_family__family", "brand").order_by(
-            "internal_code"
-        )
+        items = Item.objects.select_related(
+            "sub_family__family", "brand", "power"
+        ).order_by("internal_code")
         self.fields["item"].queryset = items
         self.fields["item"].label_from_instance = (
-            lambda obj: f"{obj.internal_code} — {obj.kind} {obj.btu}"
+            lambda obj: f"{obj.internal_code} — {obj.kind} {obj.power}"
         )
         self.fields["family"].queryset = Family.objects.order_by("name")
         self.fields["sub_family"].queryset = SubFamily.objects.select_related(
-            "family"
+            "family", "brand"
         ).order_by("name")
         self.fields["manufacturer"].queryset = Brand.objects.order_by("name")
         self.fields["tubing_length"].queryset = TubingLength.objects.order_by("length")
@@ -145,7 +153,12 @@ class FamilyForm(forms.ModelForm):
 class SubFamilyForm(forms.ModelForm):
     class Meta:
         model = SubFamily
-        fields = ("family", "name", "is_default")
+        fields = ("family", "name", "brand", "is_default")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["brand"].queryset = Brand.objects.order_by("name")
+        self.fields["brand"].required = False
 
     def clean(self):
         cleaned = super().clean()
@@ -191,7 +204,7 @@ class ItemForm(forms.ModelForm):
             "vat_rate",
             "internal_code",
             "kind",
-            "btu",
+            "power",
             "max_volume_m3",
             "is_default",
         )
@@ -201,9 +214,12 @@ class ItemForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["family"].queryset = Family.objects.order_by("name")
         self.fields["sub_family"].queryset = SubFamily.objects.select_related(
-            "family"
+            "family", "brand"
         ).order_by("family__name", "name")
         self.fields["brand"].queryset = Brand.objects.order_by("name")
+        self.fields["brand"].required = False
+        self.fields["power"].queryset = Power.objects.order_by("power", "unit")
+        self.fields["power"].label_from_instance = lambda obj: str(obj)
         self.fields["vat_rate"].queryset = VatRate.objects.order_by("rate")
         self.fields["max_volume_m3"].required = False
         if self.instance.pk and self.instance.sub_family_id:
@@ -218,6 +234,15 @@ class ItemForm(forms.ModelForm):
             self.cleaned_data.get("internal_code"),
             exclude_item_id=self.instance.pk,
         )
+
+    def clean(self):
+        cleaned = super().clean()
+        sub_family = cleaned.get("sub_family")
+        if sub_family and sub_family.brand_id:
+            cleaned["brand"] = sub_family.brand
+        elif not cleaned.get("brand"):
+            self.add_error("brand", "This field is required.")
+        return cleaned
 
 
 class ItemPriceForm(forms.Form):
@@ -253,6 +278,22 @@ class VatRateForm(forms.ModelForm):
         if commit:
             obj.save()
         return obj
+
+
+class PowerForm(forms.ModelForm):
+    class Meta:
+        model = Power
+        fields = ("power", "unit")
+
+    def clean(self):
+        cleaned = super().clean()
+        power = cleaned.get("power")
+        unit = cleaned.get("unit")
+        if power is not None and unit is not None:
+            cleaned["unit"] = validate_power_uniqueness(
+                power, unit, exclude_id=self.instance.pk
+            )
+        return cleaned
 
 
 class ParameterForm(forms.ModelForm):

@@ -14,6 +14,7 @@ from .forms import (
     ItemPriceForm,
     NewDraftForm,
     ParameterForm,
+    PowerForm,
     ProformaHeaderForm,
     ProformaLineForm,
     SiteForm,
@@ -27,6 +28,7 @@ from .models import (
     Family,
     Item,
     Parameter,
+    Power,
     Proforma,
     ProformaLine,
     Site,
@@ -246,7 +248,7 @@ def proforma_detail(request, pk):
         line_form = ProformaLineForm(instance=editing_line)
 
     lines = proforma.lines.select_related(
-        "item__sub_family__family", "item__brand", "tubing_length"
+        "item__sub_family__family", "item__brand", "item__power", "tubing_length"
     ).order_by("pk")
     drawer_open = bool(
         editing_line or line_form.errors or request.GET.get("new_line")
@@ -400,7 +402,7 @@ def family_list(request):
 def sub_family_list(request):
     q = request.GET.get("q", "").strip()
     family_id = request.GET.get("family", "").strip()
-    rows = SubFamily.objects.select_related("family").order_by("family__name", "name")
+    rows = SubFamily.objects.select_related("family", "brand").order_by("family__name", "name")
     if q:
         rows = rows.filter(name__icontains=q)
     if family_id:
@@ -471,7 +473,7 @@ def manufacturer_pricelist(request, pk):
     q = request.GET.get("q", "").strip()
     items = (
         Item.objects.filter(brand=brand)
-        .select_related("sub_family__family")
+        .select_related("sub_family__family", "power")
         .order_by("internal_code")
     )
     if q:
@@ -499,7 +501,7 @@ def item_list(request):
     family_id = request.GET.get("family", "").strip()
     brand_id = request.GET.get("brand", "").strip()
     rows = Item.objects.select_related(
-        "sub_family__family", "brand", "vat_rate"
+        "sub_family__family", "brand", "vat_rate", "power"
     ).order_by("internal_code")
     if q:
         rows = rows.filter(internal_code__icontains=q)
@@ -525,6 +527,27 @@ def item_list(request):
         nav_active="items",
         page_title="Items",
         extra_context=extra,
+    )
+
+
+@login_required
+def power_list(request):
+    q = request.GET.get("q", "").strip()
+    rows = Power.objects.order_by("power", "unit")
+    if q:
+        rows = rows.filter(unit__icontains=q) | rows.filter(power__icontains=q)
+        rows = rows.distinct()
+    return _drawer_list(
+        request,
+        model=Power,
+        form_class=PowerForm,
+        template="proformas/power_list.html",
+        redirect_name="power_list",
+        delete_fn=services.delete_power,
+        nav_active="",
+        page_title="Powers",
+        extra_context={"powers": rows, "q": q},
+        save_fn=services.save_power,
     )
 
 

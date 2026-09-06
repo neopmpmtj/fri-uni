@@ -3,7 +3,7 @@
 
 {% block extra_head %}
 <script src="{% static 'js/drawer.js' %}?v=1" defer></script>
-<script src="{% static 'js/item-form.js' %}?v=1" defer></script>
+<script src="{% static 'js/item-form.js' %}?v=2" defer></script>
 {% endblock %}
 
 {% block heading %}<span data-i18n="items">Items</span>{% endblock %}
@@ -39,7 +39,7 @@
                 <th data-i18n="subFamily">Sub-family</th>
                 <th data-i18n="manufacturer">Manufacturer</th>
                 <th data-i18n="kind">Kind</th>
-                <th data-i18n="btu">BTU</th>
+                <th data-i18n="power">Power</th>
                 <th data-i18n="maxVolumeM3">Max m3</th>
                 <th data-i18n="vat">VAT</th>
                 <th data-i18n="actions">Actions</th>
@@ -53,7 +53,7 @@
                 <td>{{ row.sub_family.name }}</td>
                 <td>{{ row.brand.name }}</td>
                 <td>{{ row.kind }}</td>
-                <td>{{ row.btu }}</td>
+                <td>{{ row.power }}</td>
                 <td>{% if row.max_volume_m3 %}{{ row.max_volume_m3 }}{% else %}—{% endif %}</td>
                 <td>{{ row.vat_rate.label }}</td>
                 <td><a href="{% url 'item_list' %}?id={{ row.pk }}" data-i18n="edit">Edit</a></td>

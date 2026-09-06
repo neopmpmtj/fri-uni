@@ -3,7 +3,7 @@
 
 {% block extra_head %}
 <script src="{% static 'js/drawer.js' %}?v=1" defer></script>
-<script src="{% static 'js/line-form.js' %}?v=1" defer></script>
+<script src="{% static 'js/line-form.js' %}?v=2" defer></script>
 {% endblock %}
 
 {% block heading %}{{ proforma.number }}{% endblock %}
@@ -90,7 +90,7 @@
                     {% if is_draft %}
                     {{ line.item }}
                     {% else %}
-                    {{ line.internal_code }} {{ line.brand_name }} {{ line.family_name }} {{ line.sub_family_name }} {{ line.kind }} {{ line.btu }}
+                    {{ line.internal_code }} {{ line.brand_name }} {{ line.family_name }} {{ line.sub_family_name }} {{ line.kind }} {{ line.power_value }} {{ line.power_unit }}
                     {% endif %}
                 </td>
                 <td>{{ line.quantity }}</td>

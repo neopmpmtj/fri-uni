@@ -1,24 +1,16 @@
-<form method="post" action="{% url 'sub_family_list' %}">
+<form method="post" action="{% url 'power_list' %}">
     {% csrf_token %}
     {% if editing %}<input type="hidden" name="id" value="{{ editing.pk }}">{% endif %}
     {{ form.non_field_errors }}
     <label>
-        <span data-i18n="family">Family</span>
-        {{ form.family }}
-        {{ form.family.errors }}
+        <span data-i18n="power">Power</span>
+        {{ form.power }}
+        {{ form.power.errors }}
     </label>
     <label>
-        <span data-i18n="name">Name</span>
-        {{ form.name }}
-        {{ form.name.errors }}
-    </label>
-    <label>
-        <span data-i18n="manufacturer">Manufacturer</span>
-        {{ form.brand }}
-        {{ form.brand.errors }}
-    </label>
-    <label>
-        <span>{{ form.is_default }} <span data-i18n="default">Default</span></span>
+        <span data-i18n="unit">Unit</span>
+        {{ form.unit }}
+        {{ form.unit.errors }}
     </label>
     <div class="drawer-actions">
         {% if editing and user.can_delete %}
