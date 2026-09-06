@@ -331,6 +331,11 @@ table.grid th {
     flex-direction: column;
 }
 
+.drawer[hidden],
+.backdrop[hidden] {
+    display: none !important;
+}
+
 .drawer-head {
     display: flex;
     justify-content: space-between;
