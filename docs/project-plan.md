@@ -351,6 +351,10 @@ Optional:
 - [x] `seed_demo` users, clients, sites, sample quotes (completed 2026-09-06)
 - [x] Manager (`staff`) cannot soft-delete clients or sites; admin can (completed 2026-09-06)
 
+- [x] Catalog: family → sub-family → item + manufacturer; internal_code; is_default; optional max_volume_m3 (completed 2026-09-06)
+- [x] Staff Items page (light) + setup cards/pages for Families, Sub-families, Manufacturers pricelist (completed 2026-09-06)
+- [x] Line drawer cascade Family → Sub-family → Manufacturer → Item with defaults (completed 2026-09-06)
+
 Do not run `seed_demo` from production deploy.
 
 ---

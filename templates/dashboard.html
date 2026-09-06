@@ -23,6 +23,7 @@
     <main class="dash-main">
         <h1 data-i18n="dashboardTitle">Proformas</h1>
         <p class="muted" data-i18n="dashboardLead">Choose a workspace.</p>
+        <h2 class="dash-section" data-i18n="daily">Daily</h2>
         <div class="card-grid">
             <a class="dash-card" href="{% url 'client_list' %}">
                 <h2 data-i18n="clients">Clients</h2>
@@ -36,12 +37,25 @@
                 <h2 data-i18n="proformas">Proformas</h2>
                 <p data-i18n="proformasDesc">Draft, issue, and download quotes.</p>
             </a>
-            {% if user.role == "admin" %}
-            <a class="dash-card" href="/admin/">
-                <h2 data-i18n="catalogAdmin">Catalog (Django admin)</h2>
-                <p data-i18n="catalogAdminDesc">Brands, models, tubing, and parameters.</p>
+            <a class="dash-card" href="{% url 'item_list' %}">
+                <h2 data-i18n="items">Items</h2>
+                <p data-i18n="itemsDesc">Catalog machines for quoting.</p>
             </a>
-            {% endif %}
+        </div>
+        <h2 class="dash-section" data-i18n="setup">Setup</h2>
+        <div class="card-grid">
+            <a class="dash-card" href="{% url 'family_list' %}">
+                <h2 data-i18n="families">Families</h2>
+                <p data-i18n="familiesDesc">Product categories such as AC.</p>
+            </a>
+            <a class="dash-card" href="{% url 'sub_family_list' %}">
+                <h2 data-i18n="subFamilies">Sub-families</h2>
+                <p data-i18n="subFamiliesDesc">Named ranges under a family.</p>
+            </a>
+            <a class="dash-card" href="{% url 'manufacturer_list' %}">
+                <h2 data-i18n="manufacturers">Manufacturers</h2>
+                <p data-i18n="manufacturersDesc">Brands and sales pricelists.</p>
+            </a>
         </div>
     </main>
     <script src="{% static 'js/dashboard.js' %}?v=1" defer></script>

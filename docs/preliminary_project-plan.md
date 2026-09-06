@@ -224,3 +224,31 @@ None.
 ### Open questions still open
 
 None.
+
+## Update 2026-09-06 — catalog families, items, setup cards
+
+Catalog is a staff workspace, not Django admin. Family is a product category; styles become sub-families; models become items.
+
+### What changed
+
+- **Family:** Air conditioners (default), Underfloor heating, Domestic hot water. Not a Daikin range name.
+- **Sub-family:** former style (Sensira, Split, …) belongs to a family, not a brand. The same sub-family can be used by any manufacturer.
+- **Item:** former catalog model. `brand` (manufacturer) + `sub_family` + `internal_code` (uppercase, uniqueness compared case-insensitive) + `kind` + `btu` + optional `max_volume_m3` (e.g. 9000 BTU indoor until 20 m³) + `list_price` (sales price).
+- **Defaults:** `is_default` on family, sub-family, brand, and item. New proforma lines pre-select the cascade (AC first).
+- **Surfaces:** dashboard **daily** cards (Clients, Sites, Proformas, Items) and **setup** cards (Families, Sub-families, Manufacturers). Manufacturers hold the sales pricelist. Items page has no price field. Django admin is not the catalog UI.
+- **CLI:** `--line` is `item_id:qty` (optional tubing id).
+- **Deferred:** volume-based auto-pick; indoor/outdoor `model_default_matches`. Field `max_volume_m3` is stored only.
+
+### Apps added/removed
+
+None.
+
+### Decisions
+
+- Extra catalog layer vs warehouse is manufacturer on the item.
+- Extra layer vs the previous HVAC schema is family (product category).
+- Sales price is edited only on the manufacturer pricelist, with a reason.
+
+### Open questions still open
+
+None.

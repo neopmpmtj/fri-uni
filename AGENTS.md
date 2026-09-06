@@ -84,9 +84,9 @@ Mark complete during session-handoff: `- [x] ... (completed YYYY-MM-DD)`
 
 ## Session
 
-**Done:** Phases 1–8 in `proformas`. Demo seed (`seed_demo`) with admin/manager users, clients, sites, and sample quotes. Manager cannot delete.
+**Done:** Phases 1–8 plus catalog slice (family → sub-family → item + manufacturer, setup cards, line cascade, internal codes). Manufacturer pricelist link typo fixed. Demo seed with admin/manager. Manager cannot delete.
 
-**Not done:** Production deploy; letterhead; real prices.
+**Not done:** Production deploy; letterhead; real prices; volume auto-pick; indoor/outdoor auto-pair; commit of this slice.
 
-**Next:** Run `seed_demo` and click through issued quote + PDF as manager. Read [`docs/handoff.md`](docs/handoff.md).
+**Next:** Hard-refresh Manufacturers → Pricelist, then draft line defaults. Read [`docs/handoff.md`](docs/handoff.md).
 

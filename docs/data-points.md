@@ -20,7 +20,7 @@ At **issue**, snapshot client, site, and catalog display fields onto the proform
 
 Shared core in one database.
 
-- **Staff web app** (MVP) writes all tables below.
+- Staff web app (MVP) writes all tables below. Catalog identity and setup (families, sub-families, manufacturers, items) are staff pages. Django admin is not the catalog UI.
 - **CLI** (later slice) writes the same proforma workflow so an LLM agent can create a proforma in one shot. Not a separate store.
 
 ### CLI contract (later slice; no extra schema)
@@ -29,7 +29,7 @@ Mandatory flags:
 
 - `--user` — staff email; becomes `created_by`
 - `--site` — site id
-- at least one `--line` — `model_id:qty` or `model_id:qty:tubing_length_id`
+- at least one `--line` — `item_id:qty` or `item_id:qty:tubing_length_id`
 
 Optional flags:
 
@@ -53,7 +53,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
   - `role` — enum `staff` | `admin`, required
   - `is_active` — boolean, required
 - Uniqueness: live `email`
-- Notes: maps to existing `accounts.User` (email login). Admin-provisioned; no public signup. Clients are not users. Demo manager (`staff`) may create and edit clients, sites, and proformas, and may issue/cancel; only `admin` may soft-delete clients and sites.
+- Notes: maps to existing `accounts.User` (email login). Admin-provisioned; no public signup. Clients are not users. Demo manager (`staff`) may create and edit clients, sites, catalog (families, sub-families, manufacturers, items, sales prices), and proformas, and may issue/cancel; only `admin` may soft-delete clients, sites, and catalog rows.
 - Extra history table: no
 - Extra activity table: no
 
@@ -62,7 +62,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 - Purpose: field-level old/new
 - Fields: entity type, entity id, field, old value, new value, actor, actor type (`user` | `system`), time, reason (required only for reason-required fields)
 - Reason-required fields elsewhere:
-  - `models.list_price`
+  - `items.list_price`
   - `tubing_lengths.price`
 - Notes: issued proforma money fields are not edited, so they are not reason-required (the edit is forbidden). Creating a draft does not need a reason.
 
@@ -125,44 +125,64 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 
 ### brands
 
-- Purpose: manufacturer (start: Mitsubishi, LG, Nippon, Daikin)
-- Written by (apps): staff web app (admin)
+- Purpose: manufacturer (start: Mitsubishi, LG, Nippon, Daikin). UI label: manufacturer.
+- Written by (apps): staff web app (setup page, not Django admin)
 - Fields (plus always-on):
   - `name` — text, required
-- Relationships: has many `styles`
-- Uniqueness: live `name`
+  - `is_default` — boolean, required, default false
+- Relationships: has many `items`; owns the **sales pricelist** (each item’s `list_price`)
+- Uniqueness: live `name`; at most one live row with `is_default` true
+- Reason-required fields: none (sales prices live on `items`)
+- Extra history table: no
+- Extra activity table: no
+
+### families
+
+- Purpose: product category (season / job type), not a manufacturer range. Start: Air conditioners (default), Underfloor heating, Domestic hot water.
+- Written by (apps): staff web app (setup page)
+- Fields (plus always-on):
+  - `name` — text, required
+  - `is_default` — boolean, required, default false
+- Relationships: has many `sub_families`
+- Uniqueness: live `name` (case-insensitive); at most one live row with `is_default` true
+- Reason-required fields: none
+- Extra history table: no
+- Extra activity table: no
+- Notes: default family is Air conditioners (most sold). New proforma lines pre-select it.
+
+### sub_families
+
+- Purpose: named range under a family (e.g. Sensira, Split). Not owned by a brand; the same sub-family may be used by any manufacturer.
+- Written by (apps): staff web app (setup page)
+- Fields (plus always-on):
+  - `family` — fk → `families`, required
+  - `name` — text, required
+  - `is_default` — boolean, required, default false
+- Relationships: belongs to one `family`; has many `items`
+- Uniqueness: live `name` per `family` (name case-insensitive); at most one live `is_default` true per family
 - Reason-required fields: none
 - Extra history table: no
 - Extra activity table: no
 
-### styles
+### items
 
-- Purpose: named range under a brand
-- Written by (apps): staff web app (admin)
+- Purpose: one catalog machine (indoor or outdoor); one machine per proforma line
+- Written by (apps): staff web app (Items page for identity; manufacturer pricelist for `list_price`)
 - Fields (plus always-on):
+  - `sub_family` — fk → `sub_families`, required
   - `brand` — fk → `brands`, required
-  - `name` — text, required
-- Relationships: belongs to one `brand`; has many `models`
-- Uniqueness: live `name` per `brand`
-- Reason-required fields: none
-- Extra history table: no
-- Extra activity table: no
-
-### models
-
-- Purpose: one machine in the catalog (indoor or outdoor); one machine per proforma line
-- Written by (apps): staff web app (admin)
-- Fields (plus always-on):
-  - `style` — fk → `styles`, required
+  - `internal_code` — text, required (stored uppercase)
   - `kind` — enum `indoor` | `outdoor`, required
   - `btu` — number, required
-  - `list_price` — money, required (current catalog price)
-- Relationships: belongs to one `style` (and thus a brand); referenced by `proforma_lines`
-- Uniqueness: live combination of `style` + `kind` + `btu`
+  - `max_volume_m3` — number, optional (room volume this unit is suitable for, up to this many cubic metres; e.g. 9000 BTU indoor → 20). Null = unknown / not applicable. For later auto-matching; not used in quoting yet.
+  - `list_price` — money, required, default 0 (current **sales** price; edited only on the manufacturer pricelist)
+  - `is_default` — boolean, required, default false
+- Relationships: belongs to one `sub_family` (and thus a family) and one `brand`; referenced by `proforma_lines`
+- Uniqueness: live `internal_code` (compared case-insensitive); at most one live `is_default` true per (`sub_family`, `brand`)
 - Reason-required fields: `list_price`
 - Extra history table: no (locked lines hold the snapshot; no catalog price-history screen)
 - Extra activity table: no
-- Notes: default indoor+outdoor matching is deferred (`model_default_matches` in a later slice). MVP quoting picks each machine on its own line.
+- Notes: default indoor+outdoor matching is deferred (`model_default_matches` in a later slice). Volume-based auto-pick is deferred (field stored only). MVP quoting picks each machine on its own line. New items start at sales price 0 until priced on the manufacturer page.
 
 ### tubing_lengths
 
@@ -176,7 +196,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 - Reason-required fields: `price`
 - Extra history table: no
 - Extra activity table: no
-- Notes: catalog-wide list, not per model. Which lengths exist is operational data.
+- Notes: catalog-wide list, not per item. Which lengths exist is operational data.
 
 ### proformas
 
@@ -224,21 +244,23 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 - Written by (apps): staff web app; later CLI
 - Fields (plus always-on):
   - `proforma` — fk → `proformas`, required
-  - `model` — fk → `models`, required
+  - `item` — fk → `items`, required
   - `quantity` — number, required, default 1
   - `extra_tubing` — boolean, required, default false
   - `tubing_length` — fk → `tubing_lengths`, optional (required when `extra_tubing` is true)
-  - `unit_price` — money, required (snapshot of model list price at save/issue)
+  - `unit_price` — money, required (snapshot of item sales price at save/issue)
   - `tubing_amount` — money, required, default 0 (snapshot of tubing length price; 0 when no extra tubing)
   - `line_total` — money, required
   - Snapshot fields (filled at issue; read by PDF):
     - `brand_name` — text
-    - `style_name` — text
+    - `family_name` — text
+    - `sub_family_name` — text
+    - `internal_code` — text
     - `kind` — enum `indoor` | `outdoor`
     - `btu` — number
     - `tubing_length_value` — number, optional (metres; 0 or null when no extra tubing)
-- Relationships: belongs to one `proforma`; points at one `model`; optional `tubing_length`
-- Uniqueness: none (same model may appear on more than one line)
+- Relationships: belongs to one `proforma`; points at one `item`; optional `tubing_length`
+- Uniqueness: none (same item may appear on more than one line)
 - Reason-required fields: none
 - Extra history table: no
 - Extra activity table: no

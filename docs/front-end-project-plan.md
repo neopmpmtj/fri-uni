@@ -11,7 +11,7 @@ A later agent implements UI only after the matching implementation phase. Checkb
 1. Read this file **before any staff HTML/CSS/JS**.
 2. Two layouts only: **dashboard** and **work page**. Do not invent a third shell.
 3. **Server-rendered tables + JS drawer.** Do not add a `/api/manage/` clone unless a later phase truly needs it. Warehouse items load rows via JSON APIs; fri-uni does not.
-4. Catalog (brands, styles, models, tubing, parameters) stays **Django contrib admin**. Do not build a warehouse-style catalog console.
+4. Catalog identity (items) is a **staff work page**. Families, sub-families, and manufacturers are **setup pages** opened from dashboard cards. Django contrib admin is not the catalog UI (it remains for users, audit, tubing, parameters until those get cards).
 
 ## Visual tokens (light only)
 
@@ -56,8 +56,10 @@ Top bar (`page-account-bar`), flex, space-between / end-aligned:
 Main (`dash-main`, max-width ~72rem):
 
 - App title (e.g. company / “Proformas”).
-- **Card grid** (`card-grid` / `dash-card`): Clients, Sites, Proformas.
-- Extra card **Catalog (Django admin)** only if `user.role == "admin"` (link to `/admin/`).
+- Two card groups:
+  - **Daily** (`card-grid`): Clients, Sites, Proformas, Items.
+  - **Setup** (`card-grid`, heading “Setup”): Families, Sub-families, Manufacturers. More setup cards will be added later.
+- Do **not** put a Catalog (Django admin) card on the dashboard.
 - Cards: white surface, 8px radius, shadow; hover accent border. Title + one-line description. `data-i18n` on strings.
 
 Language change writes `fu-lang` to **localStorage and cookie**, sets `document.documentElement.lang` to `en` or `pt-PT`, dispatches `fu-lang-changed` (warehouse uses `cc-lang-changed`). Work pages never show a language select; they only read the stored value.
@@ -69,7 +71,7 @@ To produce an English PDF for a UK client, staff return to the dashboard, switch
 `header.topbar` (surface, bottom border):
 
 1. **Eyebrow** + page **`h1`** (warehouse `console_eyebrow.html` + title). Eyebrow can be the app name; `h1` is the screen name (Clients, Sites, …).
-2. **Nav** — Home, Clients, Sites, Proformas. Active link styled (`is-active`). Home goes to the dashboard. **No language select here.**
+2. **Nav** — Home, Clients, Sites, Proformas, Items. Active link styled (`is-active`). Home goes to the dashboard. **No language select here.** Families, sub-families, and manufacturers are **not** in the topbar; they are dashboard setup cards.
 3. **Actions (right)** — page-specific buttons if needed, then the **gear**. No warehouse “Master data” cluster. No Help `?`.
 
 `main.page`: toolbar (filters + primary action), optional banner, `.table-wrap` > `table.grid`, optional pagination.
@@ -116,7 +118,27 @@ Centered card on `--bg`. Email + password. English fallback + i18n. After login 
 
 ### Dashboard
 
-Only place to set language. Cards as above. Implementation: Phase 1.
+Only place to set language. Daily cards + Setup cards as above. Implementation: Phase 1, catalog cards in the catalog slice.
+
+### Items (list + drawer)
+
+Daily catalog. Light: identity only, **no sales price field**.
+
+- Toolbar: search, filter by family / manufacturer, **New item**.
+- `.grid`: code, family, sub-family, manufacturer, kind, BTU, max m³, actions. Price may show read-only; it is not edited here.
+- Drawer: family, sub-family (filtered by family), manufacturer, internal code, kind, BTU, max volume m³ (optional), default checkbox.
+- Soft-delete in the drawer (admin only).
+
+### Families / Sub-families / Manufacturers (setup pages)
+
+Same list+drawer chrome. Opened from dashboard setup cards only.
+
+- **Families:** name, default.
+- **Sub-families:** family, name, default; filter by family.
+- **Manufacturers:** name, default. Row opens that brand’s **sales pricelist** (items + sales price). Edit price in a drawer with a **reason**. This is our sales price, not a supplier cost.
+
+Do **not** nest Families / Sub-families as a Master-data cluster on the Items page.
+
 
 ### Clients (list + drawer)
 
@@ -148,8 +170,8 @@ First-class page. **Do not** nest sites inside the client drawer the way warehou
 Analog of a warehouse **console**, not a Django form wizard.
 
 - Header **on the page** (not in a drawer): upfront discount %, extra labour, observations; live totals; **Issue** / **Cancel** when allowed (Phase 6).
-- Lines: `.grid` (model snapshot or live catalog name while draft, qty, tubing, line total).
-- **Add line / Edit line = drawer:** model, quantity, extra tubing boolean, tubing length when needed.
+- Lines: `.grid` (item snapshot or live catalog name while draft, qty, tubing, line total).
+- **Add line / Edit line = drawer:** Family → Sub-family → Manufacturer → Item (defaults pre-selected), quantity, extra tubing boolean, tubing length when needed.
 - Draft: editable. Issued: read-only header and lines; buttons **View quote** and **Download PDF** (Phase 7). Cancelled: read-only, no unlock.
 - Implementation: Phases 5–6 (PDF buttons Phase 7).
 
@@ -165,8 +187,8 @@ Document-like page for the client-facing quote (snapshots, line table, totals, o
 - Help `?` and user-manual PDFs
 - “Sign out other devices”
 - JSON item/supplier APIs and client-rendered table bodies (unless a later phase adds an API for a good reason)
-- “Master data” button cluster (Families / Sub-families / Suppliers)
-- Manager catalog console (`catalog.html`) — Django admin instead
+- “Master data” button cluster on the Items page (Families / Sub-families / Manufacturers are **dashboard setup cards**, not a toolbar cluster)
+- Manager catalog console (`catalog.html`) as a JSON SPA
 - Company Voice, branch cards, cost-trends, POs, goods receipts
 - Nested supplier-style drawers for sites
 
@@ -195,3 +217,7 @@ Document-like page for the client-facing quote (snapshots, line table, totals, o
 - [x] Front-end: Sites list + drawer (completed 2026-09-06)
 - [x] Front-end: Proforma list + work page + line drawer (completed 2026-09-06)
 - [x] Front-end: issued quote view chrome (completed 2026-09-06)
+- [x] Front-end: dashboard daily vs setup cards; Items in work nav (completed 2026-09-06)
+- [x] Front-end: Items list + drawer (no price) (completed 2026-09-06)
+- [x] Front-end: Families / Sub-families / Manufacturers setup pages + pricelist (completed 2026-09-06)
+- [x] Front-end: line drawer Family → Sub-family → Manufacturer → Item with defaults (completed 2026-09-06)

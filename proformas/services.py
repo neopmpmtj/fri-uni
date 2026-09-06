@@ -1,16 +1,19 @@
 from decimal import Decimal
+import re
 
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import transaction
 from django.utils import timezone
 
 from .models import (
     ActivityLog,
     ActorType,
     ChangeLog,
-    EquipmentModel,
+    Item,
     Parameter,
     Proforma,
     ProformaLine,
+    SubFamily,
     TubingLength,
 )
 from .pdf import build_proforma_pdf  # noqa: F401
@@ -69,27 +72,27 @@ def get_parameter(key, default=None):
     return row.value
 
 
-def update_equipment_list_price(equipment, new_price, *, reason, actor):
+def update_equipment_list_price(item, new_price, *, reason, actor):
     reason = (reason or "").strip()
     if not reason:
         raise ValidationError("A reason is required when changing list price.")
     new_price = Decimal(str(new_price))
-    old = EquipmentModel.all_objects.get(pk=equipment.pk).list_price
+    old = Item.all_objects.get(pk=item.pk).list_price
     if old == new_price:
-        return equipment
-    equipment.list_price = new_price
-    equipment.updated_by = actor
-    equipment.save(update_fields=["list_price", "updated_at", "updated_by"])
+        return item
+    item.list_price = new_price
+    item.updated_by = actor
+    item.save(update_fields=["list_price", "updated_at", "updated_by"])
     log_change(
-        entity_type="models",
-        entity_id=equipment.pk,
+        entity_type="items",
+        entity_id=item.pk,
         field="list_price",
         old_value=old,
         new_value=new_price,
         actor=actor,
         reason=reason,
     )
-    return equipment
+    return item
 
 
 def update_tubing_price(tubing, new_price, *, reason, actor):
@@ -208,11 +211,11 @@ def update_draft(
     return recompute_draft_totals(proforma)
 
 
-def _line_money(model, quantity, extra_tubing, tubing_length):
+def _line_money(item, quantity, extra_tubing, tubing_length):
     quantity = int(quantity)
     if quantity < 1:
         raise ValidationError("Quantity must be at least 1.")
-    unit_price = money(model.list_price)
+    unit_price = money(item.list_price)
     if extra_tubing:
         if tubing_length is None:
             raise ValidationError("Tubing length is required when extra tubing is needed.")
@@ -231,12 +234,12 @@ def _line_money(model, quantity, extra_tubing, tubing_length):
     }
 
 
-def add_line(proforma, model, user, *, quantity=1, extra_tubing=False, tubing_length=None):
+def add_line(proforma, item, user, *, quantity=1, extra_tubing=False, tubing_length=None):
     require_draft(proforma)
-    values = _line_money(model, quantity, extra_tubing, tubing_length)
+    values = _line_money(item, quantity, extra_tubing, tubing_length)
     line = ProformaLine.objects.create(
         proforma=proforma,
-        model=model,
+        item=item,
         created_by=user,
         updated_by=user,
         **values,
@@ -245,20 +248,20 @@ def add_line(proforma, model, user, *, quantity=1, extra_tubing=False, tubing_le
     return line
 
 
-def update_line(line, user, *, model=None, quantity=None, extra_tubing=None, tubing_length=None):
+def update_line(line, user, *, item=None, quantity=None, extra_tubing=None, tubing_length=None):
     proforma = line.proforma
     require_draft(proforma)
-    model = model if model is not None else line.model
+    item = item if item is not None else line.item
     quantity = line.quantity if quantity is None else quantity
     extra_tubing = line.extra_tubing if extra_tubing is None else extra_tubing
     if extra_tubing is False:
         tubing_length = None
     elif tubing_length is None:
         tubing_length = line.tubing_length
-    values = _line_money(model, quantity, extra_tubing, tubing_length)
+    values = _line_money(item, quantity, extra_tubing, tubing_length)
     for key, value in values.items():
         setattr(line, key, value)
-    line.model = model
+    line.item = item
     line.updated_by = user
     line.save()
     recompute_draft_totals(proforma)
@@ -286,6 +289,80 @@ def delete_site(site, user):
     site.soft_delete(user)
 
 
+def delete_family(family, user):
+    require_delete_permission(user)
+    family.soft_delete(user)
+
+
+def delete_sub_family(sub_family, user):
+    require_delete_permission(user)
+    sub_family.soft_delete(user)
+
+
+def delete_brand(brand, user):
+    require_delete_permission(user)
+    brand.soft_delete(user)
+
+
+def delete_item(item, user):
+    require_delete_permission(user)
+    item.soft_delete(user)
+
+
+INTERNAL_CODE_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+def normalize_internal_code(internal_code):
+    return (internal_code or "").strip().upper()
+
+
+def validate_internal_code(internal_code, *, exclude_item_id=None):
+    code = normalize_internal_code(internal_code)
+    if not code:
+        raise ValidationError("Internal code is required.")
+    if INTERNAL_CODE_PATTERN.fullmatch(code) is None:
+        raise ValidationError(
+            "Internal code may only contain letters, digits, dots, hyphens, and underscores."
+        )
+    qs = Item.objects.filter(internal_code__iexact=code)
+    if exclude_item_id:
+        qs = qs.exclude(pk=exclude_item_id)
+    if qs.exists():
+        raise ValidationError(f'Internal code "{code}" is already used by another item.')
+    return code
+
+
+def _clear_other_defaults(instance):
+    if not instance.is_default:
+        return
+    model = type(instance)
+    qs = model.objects.filter(is_default=True)
+    if instance.pk:
+        qs = qs.exclude(pk=instance.pk)
+    if isinstance(instance, SubFamily):
+        qs = qs.filter(family_id=instance.family_id)
+    elif isinstance(instance, Item):
+        qs = qs.filter(sub_family_id=instance.sub_family_id, brand_id=instance.brand_id)
+    qs.update(is_default=False)
+
+
+@transaction.atomic
+def save_audited(instance, user):
+    _clear_other_defaults(instance)
+    instance.updated_by = user
+    if not instance.pk:
+        instance.created_by = user
+    instance.save()
+    return instance
+
+
+def save_item(item, user):
+    item.internal_code = validate_internal_code(
+        item.internal_code, exclude_item_id=item.pk
+    )
+    return save_audited(item, user)
+
+
 def issue_proforma(proforma, user):
     require_draft(proforma)
     recompute_draft_totals(proforma)
@@ -302,11 +379,15 @@ def issue_proforma(proforma, user):
     proforma.site_postal_code = site.postal_code or ""
     proforma.site_city = site.city or ""
     proforma.site_notes = site.notes or ""
-    for line in proforma.lines.select_related("model__style__brand", "tubing_length"):
-        line.brand_name = line.model.style.brand.name
-        line.style_name = line.model.style.name
-        line.kind = line.model.kind
-        line.btu = line.model.btu
+    for line in proforma.lines.select_related(
+        "item__sub_family__family", "item__brand", "tubing_length"
+    ):
+        line.brand_name = line.item.brand.name
+        line.family_name = line.item.sub_family.family.name
+        line.sub_family_name = line.item.sub_family.name
+        line.internal_code = line.item.internal_code
+        line.kind = line.item.kind
+        line.btu = line.item.btu
         line.tubing_length_value = (
             line.tubing_length.length if line.tubing_length_id else None
         )

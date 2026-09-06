@@ -3,6 +3,7 @@
 
 {% block extra_head %}
 <script src="{% static 'js/drawer.js' %}?v=1" defer></script>
+<script src="{% static 'js/line-form.js' %}?v=1" defer></script>
 {% endblock %}
 
 {% block heading %}{{ proforma.number }}{% endblock %}
@@ -75,7 +76,7 @@
     <table class="grid">
         <thead>
             <tr>
-                <th data-i18n="model">Model</th>
+                <th data-i18n="item">Item</th>
                 <th data-i18n="quantity">Quantity</th>
                 <th data-i18n="extraTubing">Extra tubing</th>
                 <th data-i18n="lineTotal">Line total</th>
@@ -87,9 +88,9 @@
             <tr>
                 <td>
                     {% if is_draft %}
-                    {{ line.model }}
+                    {{ line.item }}
                     {% else %}
-                    {{ line.brand_name }} {{ line.style_name }} {{ line.kind }} {{ line.btu }}
+                    {{ line.internal_code }} {{ line.brand_name }} {{ line.family_name }} {{ line.sub_family_name }} {{ line.kind }} {{ line.btu }}
                     {% endif %}
                 </td>
                 <td>{{ line.quantity }}</td>

@@ -1,11 +1,23 @@
-<form method="post" action="{% url 'proforma_detail' proforma.pk %}">
+<form method="post" action="{% url 'proforma_detail' proforma.pk %}" id="line-form">
     {% csrf_token %}
     {% if editing_line %}<input type="hidden" name="id" value="{{ editing_line.pk }}">{% endif %}
     {{ line_form.non_field_errors }}
     <label>
-        <span data-i18n="model">Model</span>
-        {{ line_form.model }}
-        {{ line_form.model.errors }}
+        <span data-i18n="family">Family</span>
+        {{ line_form.family }}
+    </label>
+    <label>
+        <span data-i18n="subFamily">Sub-family</span>
+        {{ line_form.sub_family }}
+    </label>
+    <label>
+        <span data-i18n="manufacturer">Manufacturer</span>
+        {{ line_form.manufacturer }}
+    </label>
+    <label>
+        <span data-i18n="item">Item</span>
+        {{ line_form.item }}
+        {{ line_form.item.errors }}
     </label>
     <label>
         <span data-i18n="quantity">Quantity</span>
