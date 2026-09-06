@@ -2,7 +2,7 @@
 
 Internal HVAC back office for creating **proforma invoices** — client quotes for equipment installation and cost, including an upfront-payment discount. Not an official finance document.
 
-> **Last updated:** 2026-09-06 10:58 WEST
+> **Last updated:** 2026-09-06 13:19 WEST
 
 ## What it does
 
@@ -16,10 +16,17 @@ A management command (`create_proforma`) can create a proforma in one shot (same
 source .venv/bin/activate
 cp .env.example .env   # set SECRET_KEY
 .venv/bin/python manage.py migrate
-.venv/bin/python manage.py createsuperuser
+.venv/bin/python manage.py seed_demo
 .venv/bin/python manage.py runserver
 pytest
 ```
+
+Demo logins (password `fribila-demo`):
+
+- `proforma-admin@fribila.dev` — Django admin, can delete clients/sites
+- `proforma-manager@fribila.dev` — quoting UI, cannot delete
+
+`seed_catalog` is catalog-only. Do not run `seed_demo` in production.
 
 ## Documentation
 
@@ -41,4 +48,4 @@ pytest
 
 ## Pick up from here
 
-Staff web MVP and CLI are implemented (`proformas`). Work is uncommitted. Next: finish local click-through (sites, draft, issue, PDF), then commit when asked. See [`docs/handoff.md`](docs/handoff.md).
+Staff web MVP and CLI are implemented (`proformas`). For a clickable demo run `seed_demo` and log in as the manager. See [`docs/handoff.md`](docs/handoff.md).

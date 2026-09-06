@@ -180,7 +180,7 @@ Always-on columns on every proformas entity. Soft-delete manager: default querys
 - UX: list + drawer as in [`front-end-project-plan.md`](front-end-project-plan.md). Server-rendered tables. Sites are a first-class list page (do not nest sites inside the client drawer).
 - Client: `name` required; `phone`, `email` optional.
 - Site: `client` required; `alias_1` required; `alias_2`–`alias_4` optional; `street`, `postal_code`, `city`, `notes` optional. Four alias columns, not a list.
-- Soft delete from the drawer (do not hard-delete). Lists use the live manager.
+- Soft delete from the drawer (do not hard-delete). Lists use the live manager. **Only admin** may soft-delete; staff (demo manager) can create and edit but Delete is hidden and POSTs return 403.
 - Login required. Both `staff` and `admin` may use these screens.
 
 ### Tests
@@ -341,6 +341,17 @@ Optional:
 
 - [x] Phase 8: `create_proforma` management command (completed 2026-09-06)
 - [x] Phase 8 tests (completed 2026-09-06)
+
+---
+
+## Demo seed
+
+**Goal:** One command fills a clickable demo: catalog, two users, clients, sites, and proformas in draft / issued / cancelled.
+
+- [x] `seed_demo` users, clients, sites, sample quotes (completed 2026-09-06)
+- [x] Manager (`staff`) cannot soft-delete clients or sites; admin can (completed 2026-09-06)
+
+Do not run `seed_demo` from production deploy.
 
 ---
 

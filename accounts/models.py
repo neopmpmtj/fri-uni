@@ -63,5 +63,9 @@ class User(AbstractBaseUser, PermissionsMixin):
         self.is_staff = self.role == self.Role.ADMIN
         super().save(*args, **kwargs)
 
+    @property
+    def can_delete(self):
+        return self.role == self.Role.ADMIN
+
     def __str__(self):
         return self.email

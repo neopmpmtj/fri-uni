@@ -53,7 +53,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
   - `role` — enum `staff` | `admin`, required
   - `is_active` — boolean, required
 - Uniqueness: live `email`
-- Notes: maps to existing `accounts.User` (email login). Admin-provisioned; no public signup. Clients are not users.
+- Notes: maps to existing `accounts.User` (email login). Admin-provisioned; no public signup. Clients are not users. Demo manager (`staff`) may create and edit clients, sites, and proformas, and may issue/cancel; only `admin` may soft-delete clients and sites.
 - Extra history table: no
 - Extra activity table: no
 

@@ -43,6 +43,7 @@ views / management commands  →  proformas/services.py  →  models.py
 source .venv/bin/activate
 cp .env.example .env
 .venv/bin/python manage.py migrate
+.venv/bin/python manage.py seed_demo
 .venv/bin/python manage.py runserver
 pytest
 ```
@@ -83,9 +84,9 @@ Mark complete during session-handoff: `- [x] ... (completed YYYY-MM-DD)`
 
 ## Session
 
-**Done:** Phases 1–8 in `proformas`. Local login + dashboard + clients list. pytest 25 passed.
+**Done:** Phases 1–8 in `proformas`. Demo seed (`seed_demo`) with admin/manager users, clients, sites, and sample quotes. Manager cannot delete.
 
-**Not done:** Commit; production deploy; letterhead; real prices; full browser pass of quoting/PDF.
+**Not done:** Production deploy; letterhead; real prices.
 
-**Next:** Click through sites → draft → issue → PDF, then commit if asked. Read [`docs/handoff.md`](docs/handoff.md).
+**Next:** Run `seed_demo` and click through issued quote + PDF as manager. Read [`docs/handoff.md`](docs/handoff.md).
 
