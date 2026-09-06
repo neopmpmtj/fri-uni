@@ -363,6 +363,32 @@ def validate_internal_code(internal_code, *, exclude_item_id=None):
     return code
 
 
+def validate_item_identity(
+    *,
+    sub_family,
+    brand,
+    kind,
+    power,
+    exclude_item_id=None,
+):
+    if not all([sub_family, brand, kind, power]):
+        return
+    qs = Item.objects.filter(
+        sub_family=sub_family,
+        brand=brand,
+        kind=kind,
+        power=power,
+    )
+    if exclude_item_id:
+        qs = qs.exclude(pk=exclude_item_id)
+    existing = qs.first()
+    if existing:
+        raise ValidationError(
+            "An item with this sub-family, manufacturer, kind, and power already exists "
+            f"({existing.internal_code})."
+        )
+
+
 def _clear_other_defaults(instance):
     if not getattr(instance, "is_default", False):
         return
@@ -433,6 +459,13 @@ def save_audited(instance, user):
 def save_item(item, user):
     item.internal_code = validate_internal_code(
         item.internal_code, exclude_item_id=item.pk
+    )
+    validate_item_identity(
+        sub_family=item.sub_family,
+        brand=item.brand,
+        kind=item.kind,
+        power=item.power,
+        exclude_item_id=item.pk,
     )
     return save_audited(item, user)
 

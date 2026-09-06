@@ -17,6 +17,7 @@ from .models import (
 from .services import (
     percent_to_rate,
     validate_internal_code,
+    validate_item_identity,
     validate_power_uniqueness,
     validate_vat_code,
 )
@@ -242,6 +243,17 @@ class ItemForm(forms.ModelForm):
             cleaned["brand"] = sub_family.brand
         elif not cleaned.get("brand"):
             self.add_error("brand", "This field is required.")
+            return cleaned
+        try:
+            validate_item_identity(
+                sub_family=sub_family,
+                brand=cleaned.get("brand"),
+                kind=cleaned.get("kind"),
+                power=cleaned.get("power"),
+                exclude_item_id=self.instance.pk,
+            )
+        except ValidationError as exc:
+            self.add_error(None, exc)
         return cleaned
 
 

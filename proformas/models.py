@@ -288,6 +288,11 @@ class Item(AuditedModel):
                 condition=Q(deleted_at__isnull=True, is_default=True),
                 name="uniq_live_default_item_per_subfamily_brand",
             ),
+            UniqueConstraint(
+                fields=["sub_family", "brand", "kind", "power"],
+                condition=Q(deleted_at__isnull=True),
+                name="uniq_live_item_identity",
+            ),
         ]
 
     def __str__(self):

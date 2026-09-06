@@ -13,6 +13,7 @@ from proformas.services import (
     percent_to_rate,
     update_equipment_list_price,
     validate_internal_code,
+    validate_item_identity,
 )
 
 
@@ -34,6 +35,124 @@ def test_internal_code_is_stored_uppercase():
 def test_internal_code_unique_is_case_insensitive(indoor):
     with pytest.raises(ValidationError):
         validate_internal_code("mit-spl-i-9")
+
+
+@pytest.mark.django_db
+def test_item_identity_unique_rejects_duplicate_combo(indoor):
+    with pytest.raises(ValidationError) as exc:
+        validate_item_identity(
+            sub_family=indoor.sub_family,
+            brand=indoor.brand,
+            kind=indoor.kind,
+            power=indoor.power,
+        )
+    assert "MIT-SPL-I-9" in str(exc.value)
+
+
+@pytest.mark.django_db
+def test_item_identity_unique_allows_same_item_on_edit(indoor):
+    validate_item_identity(
+        sub_family=indoor.sub_family,
+        brand=indoor.brand,
+        kind=indoor.kind,
+        power=indoor.power,
+        exclude_item_id=indoor.pk,
+    )
+
+
+@pytest.mark.django_db
+def test_new_item_rejects_duplicate_identity(client, staff_user, indoor):
+    client.force_login(staff_user)
+    response = client.post(
+        reverse("item_list"),
+        {
+            "sub_family": indoor.sub_family_id,
+            "brand": indoor.brand_id,
+            "vat_rate": indoor.vat_rate_id,
+            "power": indoor.power_id,
+            "internal_code": "ABC-TESTE",
+            "kind": Item.Kind.INDOOR,
+            "action": "save",
+        },
+    )
+    assert response.status_code == 200
+    assert Item.objects.filter(internal_code="ABC-TESTE").count() == 0
+    assert "MIT-SPL-I-9" in str(response.context["form"].non_field_errors())
+
+
+@pytest.mark.django_db
+def test_new_item_allows_same_identity_with_different_max_volume(client, staff_user, indoor):
+    client.force_login(staff_user)
+    response = client.post(
+        reverse("item_list"),
+        {
+            "sub_family": indoor.sub_family_id,
+            "brand": indoor.brand_id,
+            "vat_rate": indoor.vat_rate_id,
+            "power": indoor.power_id,
+            "internal_code": "MIT-SPL-I-9",
+            "kind": Item.Kind.INDOOR,
+            "max_volume_m3": "25",
+            "action": "save",
+            "id": indoor.pk,
+        },
+    )
+    assert response.status_code == 302
+    indoor.refresh_from_db()
+    assert indoor.max_volume_m3 == Decimal("25")
+
+
+@pytest.mark.django_db
+def test_edit_item_rejects_duplicate_identity(client, staff_user, indoor):
+    client.force_login(staff_user)
+    power_12k, _ = Power.objects.get_or_create(power=12000, unit="BTU")
+    other = Item.objects.create(
+        sub_family=indoor.sub_family,
+        brand=indoor.brand,
+        vat_rate=indoor.vat_rate,
+        power=power_12k,
+        internal_code="MIT-SPL-I-12",
+        kind=Item.Kind.INDOOR,
+        list_price=Decimal("600.00"),
+    )
+    response = client.post(
+        reverse("item_list"),
+        {
+            "sub_family": other.sub_family_id,
+            "brand": other.brand_id,
+            "vat_rate": other.vat_rate_id,
+            "power": other.power_id,
+            "internal_code": indoor.internal_code,
+            "kind": other.kind,
+            "action": "save",
+            "id": indoor.pk,
+        },
+    )
+    assert response.status_code == 200
+    original_power_id = indoor.power_id
+    indoor.refresh_from_db()
+    assert indoor.power_id == original_power_id
+    assert "MIT-SPL-I-12" in str(response.context["form"].non_field_errors())
+
+
+@pytest.mark.django_db
+def test_same_sub_family_different_manufacturer_allowed(client, staff_user, indoor):
+    client.force_login(staff_user)
+    lg = Brand.objects.create(name="LG")
+    response = client.post(
+        reverse("item_list"),
+        {
+            "sub_family": indoor.sub_family_id,
+            "brand": lg.pk,
+            "vat_rate": indoor.vat_rate_id,
+            "power": indoor.power_id,
+            "internal_code": "LG-SPL-I-9",
+            "kind": Item.Kind.INDOOR,
+            "action": "save",
+        },
+    )
+    assert response.status_code == 302
+    assert Item.objects.filter(internal_code="LG-SPL-I-9").exists()
 
 
 @pytest.mark.django_db
@@ -210,25 +329,28 @@ def test_item_post_without_vat_rate_is_invalid(client, staff_user, indoor):
 def test_new_item_inherits_sub_family_manufacturer(client, staff_user):
     call_command("seed_catalog")
     client.force_login(staff_user)
-    perfera = SubFamily.objects.get(name="Perfera", family__name=FAMILY_AC)
+    ac = Family.objects.get(name=FAMILY_AC)
     daikin = Brand.objects.get(name="Daikin")
     mitsu = Brand.objects.get(name="Mitsubishi")
+    owned_range = SubFamily.objects.create(
+        family=ac, name="Owned Range", brand=daikin
+    )
     vat = VatRate.objects.get(code="VAT23")
     power = Power.objects.get(power=9000, unit="BTU")
     response = client.post(
         reverse("item_list"),
         {
-            "sub_family": perfera.pk,
+            "sub_family": owned_range.pk,
             "brand": mitsu.pk,
             "vat_rate": vat.pk,
             "power": power.pk,
-            "internal_code": "DAI-PRF-I-99",
+            "internal_code": "DAI-OWN-I-9",
             "kind": Item.Kind.INDOOR,
             "action": "save",
         },
     )
     assert response.status_code == 302
-    item = Item.objects.get(internal_code="DAI-PRF-I-99")
+    item = Item.objects.get(internal_code="DAI-OWN-I-9")
     assert item.brand_id == daikin.pk
 
 

@@ -212,7 +212,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
   - `list_price` — money, required, default 0 (current **sales** price; edited only on the manufacturer pricelist)
   - `is_default` — boolean, required, default false
 - Relationships: belongs to one `sub_family` (and thus a family), one `brand`, one `vat_rate`, and one `power`; referenced by `proforma_lines`
-- Uniqueness: live `internal_code` (compared case-insensitive); at most one live `is_default` true per (`sub_family`, `brand`)
+- Uniqueness: live `internal_code` (compared case-insensitive); live (`sub_family`, `brand`, `kind`, `power`) — one catalog machine per combo (family is implied by `sub_family`); at most one live `is_default` true per (`sub_family`, `brand`)
 - Reason-required fields: `list_price`
 - Extra history table: no (locked lines hold the snapshot; no catalog price-history screen)
 - Extra activity table: no
