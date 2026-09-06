@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 
 from .models import (
@@ -269,6 +269,21 @@ def remove_line(line, user):
     require_draft(line.proforma)
     line.soft_delete(user)
     recompute_draft_totals(line.proforma)
+
+
+def require_delete_permission(user):
+    if not getattr(user, "can_delete", False):
+        raise PermissionDenied("Only admin can delete.")
+
+
+def delete_client(client, user):
+    require_delete_permission(user)
+    client.soft_delete(user)
+
+
+def delete_site(site, user):
+    require_delete_permission(user)
+    site.soft_delete(user)
 
 
 def issue_proforma(proforma, user):

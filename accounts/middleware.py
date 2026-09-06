@@ -12,6 +12,6 @@ class StaffAdminBlockMiddleware:
     def __call__(self, request):
         if request.path.startswith("/admin/") and getattr(request, "user", None):
             user = request.user
-            if user.is_authenticated and getattr(user, "role", None) == User.Role.STAFF:
+            if user.is_authenticated and getattr(user, "role", None) != User.Role.ADMIN:
                 return HttpResponseForbidden()
         return self.get_response(request)

@@ -202,3 +202,25 @@ None.
 ### Open questions still open
 
 None.
+
+## Update 2026-09-06 — Demo seed and manager delete
+
+Local/demo `seed_demo` fills a clickable suite. `seed_catalog` stays catalog-only.
+
+### What changed
+
+- **Users:** `proforma-admin@fribila.dev` (`admin`, Django admin, may soft-delete) and `proforma-manager@fribila.dev` (`staff`, quoting UI, may not delete). Shared demo password documented in README. Manager maps to existing `staff` role; no third role.
+- **Delete:** only `admin` may soft-delete clients and sites. Staff/manager do not see Delete in the drawer; POST delete is 403. Removing a line from a **draft** quote is still allowed (editing, not retiring a client/site). Cancel is not delete.
+- **Demo records:** three clients, five sites, five proformas (two issued, two drafts, one cancelled). Idempotent. Not for production.
+
+### Apps added/removed
+
+None.
+
+### Decisions
+
+- Demo manager is `role=staff`. Only admin deletes clients/sites.
+
+### Open questions still open
+
+None.

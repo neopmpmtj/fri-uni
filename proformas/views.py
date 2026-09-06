@@ -26,8 +26,7 @@ def client_list(request):
     if request.method == "POST":
         pk = request.POST.get("id")
         if request.POST.get("action") == "delete" and pk:
-            client = get_object_or_404(Client, pk=pk)
-            client.soft_delete(request.user)
+            services.delete_client(get_object_or_404(Client, pk=pk), request.user)
             return redirect("client_list")
         instance = get_object_or_404(Client, pk=pk) if pk else None
         form = ClientForm(request.POST, instance=instance)
@@ -67,8 +66,7 @@ def site_list(request):
     if request.method == "POST":
         pk = request.POST.get("id")
         if request.POST.get("action") == "delete" and pk:
-            site = get_object_or_404(Site, pk=pk)
-            site.soft_delete(request.user)
+            services.delete_site(get_object_or_404(Site, pk=pk), request.user)
             return redirect("site_list")
         instance = get_object_or_404(Site, pk=pk) if pk else None
         form = SiteForm(request.POST, instance=instance)

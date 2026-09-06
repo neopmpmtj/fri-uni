@@ -1,6 +1,6 @@
 # Session handoff
 
-> **Last updated:** 2026-09-06 10:58 WEST (Europe/Lisbon)  
+> **Last updated:** 2026-09-06 13:19 WEST (Europe/Lisbon)  
 > Replace with the current date and time whenever you edit this file.
 
 ## Project
@@ -15,26 +15,25 @@ Staff app is **`proformas`** (`accounts` is User/login only). Playbook (all phas
 
 Warehouse_V2 is chrome reference only — do not clone warehouse product features.
 
-Uncommitted implementation is on `main` (ahead of origin by 1, plus a large unstaged tree). Do not commit unless asked.
+Uncommitted implementation is no longer the story: work is on feature branches with PRs. Do not run `seed_demo` in production.
 
 ## Done
 
 - Phases 1–8: login/`role`/dashboard i18n, models, catalog admin + `seed_catalog`, clients/sites drawers, draft quoting, issue/cancel snapshots, on-screen quote + WeasyPrint PDF, `create_proforma` CLI
 - Domain app named `proformas` (not `office`)
-- Local smoke this session: `seed_catalog`, `runserver`, login, dashboard, `/clients/` (200)
-- pytest: 25 passed
+- `seed_demo`: admin + manager users, three clients, five sites, five proformas (issued / draft / cancelled). Manager cannot soft-delete.
+- pytest: 25 passed plus new demo-seed tests
 
 ## Not done
 
-- Production deploy; work is not committed
+- Production deploy
 - Company name/logo/address on PDF letterhead (placeholder `fri-uni`)
 - Real catalog prices (seed uses round demo numbers)
-- Full browser pass of sites / draft / issue / PDF (clients list was opened; drawers not fully exercised)
 - Email send / stored PDFs / Google OAuth / dark theme / indoor-outdoor auto-pair
 
 ## Next
 
-Continue local click-through (sites, new draft, lines, issue, quote/PDF), then commit when asked. Letterhead and live prices when the user supplies them.
+Run `seed_demo`, log in as manager, click through issued quote + PDF. Letterhead and live prices when the user supplies them.
 
 Dev-server 404s for `/json/version` and `/service-worker.js` are the browser (DevTools / leftover SW on `127.0.0.1:8000`), not missing app routes. Unregister the service worker in DevTools if the log is noisy. Do not add a dummy SW.
 
@@ -44,8 +43,7 @@ Dev-server 404s for `/json/version` and `/service-worker.js` are the browser (De
 source .venv/bin/activate
 cp .env.example .env
 .venv/bin/python manage.py migrate
-.venv/bin/python manage.py createsuperuser
-.venv/bin/python manage.py seed_catalog
+.venv/bin/python manage.py seed_demo
 .venv/bin/python manage.py runserver
 pytest
 ```
