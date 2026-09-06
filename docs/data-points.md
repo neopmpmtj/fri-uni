@@ -172,7 +172,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 - Purpose: standard catalog power ratings (AC BTU today; kW and other units later)
 - Written by (apps): staff web app (setup page)
 - Fields (plus always-on):
-  - `power` — number, required (e.g. `9000`, `2.5`)
+  - `power` — integer, required (e.g. `9000`; kW values such as `12` later)
   - `unit` — text, required (e.g. `BTU`, `kW`; stored trimmed)
 - Relationships: has many `items`
 - Uniqueness: live (`power`, `unit`) with unit compared case-insensitive
@@ -291,7 +291,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
     - `sub_family_name` — text
     - `internal_code` — text
     - `kind` — enum `indoor` | `outdoor`
-    - `power_value` — number (snapshot of catalog power at issue)
+    - `power_value` — integer (snapshot of catalog power at issue)
     - `power_unit` — text (snapshot of catalog unit at issue)
     - `tubing_length_value` — number, optional (metres; 0 or null when no extra tubing)
 - Relationships: belongs to one `proforma`; points at one `item`; optional `tubing_length`

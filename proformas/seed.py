@@ -185,7 +185,7 @@ def _seed_powers():
     by_amount = {}
     for amount in BTUS:
         row, _ = _live_get_or_create(
-            Power, power=Decimal(amount), unit="BTU"
+            Power, power=amount, unit="BTU"
         )
         by_amount[amount] = row
     return by_amount
@@ -327,7 +327,7 @@ def _catalog_item(brand, sub_family, kind, power_amount):
         brand__name=brand,
         sub_family__name=sub_family,
         kind=kind,
-        power__power=Decimal(power_amount),
+        power__power=power_amount,
         power__unit="BTU",
     )
 

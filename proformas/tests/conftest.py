@@ -47,7 +47,7 @@ def indoor(db):
         },
     )
     power, _ = Power.objects.get_or_create(
-        power=Decimal("9000"), unit="BTU"
+        power=9000, unit="BTU"
     )
     return Item.objects.create(
         sub_family=sub,

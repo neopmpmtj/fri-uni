@@ -88,7 +88,7 @@ def test_seed_catalog_twice_does_not_duplicate():
         brand__name="Daikin",
         sub_family__name="Sensira",
         kind=Item.Kind.INDOOR,
-        power__power=Decimal("9000"),
+        power__power=9000,
         power__unit="BTU",
     )
     assert indoor_9.internal_code == "DAI-SEN-I-9"
@@ -214,7 +214,7 @@ def test_new_item_inherits_sub_family_manufacturer(client, staff_user):
     daikin = Brand.objects.get(name="Daikin")
     mitsu = Brand.objects.get(name="Mitsubishi")
     vat = VatRate.objects.get(code="VAT23")
-    power = Power.objects.get(power=Decimal("9000"), unit="BTU")
+    power = Power.objects.get(power=9000, unit="BTU")
     response = client.post(
         reverse("item_list"),
         {
@@ -238,7 +238,7 @@ def test_new_item_split_without_manufacturer_is_invalid(client, staff_user):
     client.force_login(staff_user)
     split = SubFamily.objects.get(name="Split", family__name=FAMILY_AC)
     vat = VatRate.objects.get(code="VAT23")
-    power = Power.objects.get(power=Decimal("9000"), unit="BTU")
+    power = Power.objects.get(power=9000, unit="BTU")
     response = client.post(
         reverse("item_list"),
         {

@@ -195,7 +195,7 @@ class SubFamily(AuditedModel):
 class Power(AuditedModel):
     """Catalog power rating (data-points table `powers`)."""
 
-    power = models.DecimalField(max_digits=12, decimal_places=2)
+    power = models.IntegerField()
     unit = models.CharField(max_length=32)
 
     class Meta:
@@ -387,9 +387,7 @@ class ProformaLine(AuditedModel):
     sub_family_name = models.CharField(max_length=128, blank=True)
     internal_code = models.CharField(max_length=64, blank=True)
     kind = models.CharField(max_length=16, blank=True)
-    power_value = models.DecimalField(
-        max_digits=12, decimal_places=2, null=True, blank=True
-    )
+    power_value = models.IntegerField(null=True, blank=True)
     power_unit = models.CharField(max_length=32, blank=True)
     tubing_length_value = models.DecimalField(
         max_digits=8, decimal_places=2, null=True, blank=True

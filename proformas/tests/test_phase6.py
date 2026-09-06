@@ -37,7 +37,7 @@ def test_issue_snapshots_catalog_names(issued, indoor):
     assert line.sub_family_name == "Split"
     assert line.brand_name == "Mitsu"
     assert line.internal_code == indoor.internal_code
-    assert line.power_value == Decimal("9000")
+    assert line.power_value == 9000
     assert line.power_unit == "BTU"
 
 
@@ -47,7 +47,7 @@ def test_issue_snapshots_power_after_catalog_change(issued, indoor):
     indoor.power.save()
     issued.refresh_from_db()
     line.refresh_from_db()
-    assert line.power_value == Decimal("9000")
+    assert line.power_value == 9000
     assert line.power_unit == "BTU"
 
 

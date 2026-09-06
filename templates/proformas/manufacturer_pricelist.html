@@ -25,6 +25,7 @@
                 <th data-i18n="subFamily">Sub-family</th>
                 <th data-i18n="kind">Kind</th>
                 <th data-i18n="power">Power</th>
+                <th data-i18n="unit">Unit</th>
                 <th data-i18n="salesPrice">Sales price</th>
                 <th data-i18n="actions">Actions</th>
             </tr>
@@ -35,12 +36,13 @@
                 <td>{{ row.internal_code }}</td>
                 <td>{{ row.sub_family.name }}</td>
                 <td>{{ row.kind }}</td>
-                <td>{{ row.power }}</td>
+                <td>{{ row.power.power }}</td>
+                <td>{{ row.power.unit }}</td>
                 <td>{{ row.list_price }}</td>
                 <td><a href="{% url 'manufacturer_pricelist' brand.pk %}?id={{ row.pk }}" data-i18n="edit">Edit</a></td>
             </tr>
             {% empty %}
-            <tr><td colspan="6" data-i18n="empty">No rows yet.</td></tr>
+            <tr><td colspan="7" data-i18n="empty">No rows yet.</td></tr>
             {% endfor %}
         </tbody>
     </table>
