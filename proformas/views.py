@@ -41,6 +41,46 @@ from .quote_i18n import quote_labels
 from accounts.lang import normalize_lang
 
 
+ITEM_SORT_FIELDS = {
+    "internal_code": ["internal_code"],
+    "family": ["sub_family__family__name"],
+    "sub_family": ["sub_family__name"],
+    "manufacturer": ["brand__name"],
+    "kind": ["kind"],
+    "power": ["power__power", "power__unit"],
+}
+
+
+def _item_sort_context(request):
+    sort = request.GET.get("sort", "internal_code").strip()
+    if sort not in ITEM_SORT_FIELDS:
+        sort = "internal_code"
+    direction = request.GET.get("dir", "asc").strip().lower()
+    if direction not in ("asc", "desc"):
+        direction = "asc"
+
+    def link_for(col):
+        params = request.GET.copy()
+        if col == sort and direction == "asc":
+            params["dir"] = "desc"
+        else:
+            params["dir"] = "asc"
+        params["sort"] = col
+        return params.urlencode()
+
+    prefix = "-" if direction == "desc" else ""
+    ordering = [f"{prefix}{field}" for field in ITEM_SORT_FIELDS[sort]]
+    if sort != "internal_code":
+        ordering.append("internal_code")
+
+    return {
+        "sort": sort,
+        "dir": direction,
+        "sort_urls": {col: link_for(col) for col in ITEM_SORT_FIELDS},
+        "ordering": ordering,
+    }
+
+
 def _save_audited(form, user):
     obj = form.save(commit=False)
     obj.updated_by = user
@@ -500,9 +540,10 @@ def item_list(request):
     q = request.GET.get("q", "").strip()
     family_id = request.GET.get("family", "").strip()
     brand_id = request.GET.get("brand", "").strip()
+    sort_ctx = _item_sort_context(request)
     rows = Item.objects.select_related(
         "sub_family__family", "brand", "vat_rate", "power"
-    ).order_by("internal_code")
+    ).order_by(*sort_ctx["ordering"])
     if q:
         rows = rows.filter(internal_code__icontains=q)
     if family_id:
@@ -516,6 +557,9 @@ def item_list(request):
         "brand_id": brand_id,
         "families": Family.objects.order_by("name"),
         "manufacturers": Brand.objects.order_by("name"),
+        "sort": sort_ctx["sort"],
+        "dir": sort_ctx["dir"],
+        "sort_urls": sort_ctx["sort_urls"],
     }
     return _drawer_list(
         request,

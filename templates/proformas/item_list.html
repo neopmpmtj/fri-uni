@@ -28,18 +28,32 @@
             <option value="{{ b.pk }}" {% if brand_id == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>
             {% endfor %}
         </select>
+        <input type="hidden" name="sort" value="{{ sort }}">
+        <input type="hidden" name="dir" value="{{ dir }}">
     </form>
 </div>
 <div class="table-wrap">
     <table class="grid">
         <thead>
             <tr>
-                <th data-i18n="internalCode">Internal code</th>
-                <th data-i18n="family">Family</th>
-                <th data-i18n="subFamily">Sub-family</th>
-                <th data-i18n="manufacturer">Manufacturer</th>
-                <th data-i18n="kind">Kind</th>
-                <th data-i18n="power">Power</th>
+                <th>
+                    <a href="?{{ sort_urls.internal_code }}" class="th-sort{% if sort == 'internal_code' %} is-sorted is-{{ dir }}{% endif %}" data-i18n="internalCode">Internal code</a>
+                </th>
+                <th>
+                    <a href="?{{ sort_urls.family }}" class="th-sort{% if sort == 'family' %} is-sorted is-{{ dir }}{% endif %}" data-i18n="family">Family</a>
+                </th>
+                <th>
+                    <a href="?{{ sort_urls.sub_family }}" class="th-sort{% if sort == 'sub_family' %} is-sorted is-{{ dir }}{% endif %}" data-i18n="subFamily">Sub-family</a>
+                </th>
+                <th>
+                    <a href="?{{ sort_urls.manufacturer }}" class="th-sort{% if sort == 'manufacturer' %} is-sorted is-{{ dir }}{% endif %}" data-i18n="manufacturer">Manufacturer</a>
+                </th>
+                <th>
+                    <a href="?{{ sort_urls.kind }}" class="th-sort{% if sort == 'kind' %} is-sorted is-{{ dir }}{% endif %}" data-i18n="kind">Kind</a>
+                </th>
+                <th>
+                    <a href="?{{ sort_urls.power }}" class="th-sort{% if sort == 'power' %} is-sorted is-{{ dir }}{% endif %}" data-i18n="power">Power</a>
+                </th>
                 <th data-i18n="unit">Unit</th>
                 <th data-i18n="maxVolumeM3">Max m3</th>
                 <th data-i18n="vat">VAT</th>

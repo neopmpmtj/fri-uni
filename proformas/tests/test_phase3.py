@@ -156,6 +156,28 @@ def test_same_sub_family_different_manufacturer_allowed(client, staff_user, indo
 
 
 @pytest.mark.django_db
+def test_item_list_sorts_by_manufacturer_desc(client, staff_user, indoor):
+    client.force_login(staff_user)
+    lg = Brand.objects.create(name="LG")
+    Item.objects.create(
+        sub_family=indoor.sub_family,
+        brand=lg,
+        vat_rate=indoor.vat_rate,
+        power=indoor.power,
+        internal_code="LG-SPL-I-9",
+        kind=Item.Kind.INDOOR,
+        list_price=Decimal("500.00"),
+    )
+    response = client.get(
+        reverse("item_list"),
+        {"sort": "manufacturer", "dir": "desc"},
+    )
+    assert response.status_code == 200
+    codes = [row.internal_code for row in response.context["items"]]
+    assert codes.index("MIT-SPL-I-9") < codes.index("LG-SPL-I-9")
+
+
+@pytest.mark.django_db
 def test_list_price_without_reason_fails(indoor, admin_user):
     with pytest.raises(ValidationError):
         update_equipment_list_price(
