@@ -26,8 +26,7 @@ views / management commands  →  proformas/services.py  →  models.py
 - When you notice new plans, features, or follow-ups not yet in the backlog, **ask**: "Should I add this to `docs/project-plan.md`?"
 - When the user says **"put this in the plan"** (or similar), append to `docs/project-plan.md` immediately — do not rely on chat memory
 - Use `.venv/bin/python` for `manage.py` and tests (or activate the venv first)
-- Portuguese **NIF** (`tax_number`) fields: follow [`.cursor/rules/nif-tax-number.mdc`](.cursor/rules/nif-tax-number.mdc); reuse `validate_tax_number` in `proformas/services.py`
-- Portuguese **phone** fields: follow [`.cursor/rules/phone-number.mdc`](.cursor/rules/phone-number.mdc); reuse `validate_phone_number` and `configure_nine_digit_form_field` in `proformas/services.py`
+- Portuguese **NIF and phone** fields: follow [`.cursor/rules/portuguese-nif-and-phone.mdc`](.cursor/rules/portuguese-nif-and-phone.mdc); reuse `validate_tax_number`, `validate_phone_number`, and `configure_nine_digit_form_field` in `proformas/services.py`
 - Put secrets in root `.env` only; use `.env.example` as the committed template
 - End substantive sessions with `/session-handoff` or skill `session-handoff`
 
@@ -78,7 +77,7 @@ Mark complete during session-handoff: `- [x] ... (completed YYYY-MM-DD)`
 
 | Path | Use |
 |------|-----|
-| [`.cursor/rules/`](.cursor/rules/) | Project rules (`.mdc`); includes `nif-tax-number` and `phone-number` |
+| [`.cursor/rules/`](.cursor/rules/) | Project rules (`.mdc`); includes `portuguese-nif-and-phone` for NIF and phone validation |
 | [`.cursor/skills/`](.cursor/skills/) | Project skills (`session-handoff`, `eliciting-project-model`) |
 | [`.cursor/agents/`](.cursor/agents/) | Custom subagents |
 | [`.cursor/commands/`](.cursor/commands/) | Slash commands |
@@ -86,9 +85,9 @@ Mark complete during session-handoff: `- [x] ... (completed YYYY-MM-DD)`
 
 ## Session
 
-**Done:** Phases 1–8 plus catalog slice (family → sub-family → item + manufacturer, VAT on items, setup cards, line cascade). Demo seed with admin/manager. Review remediations on this branch (CLI atomicity, snapshots, delete-in-use, validation).
+**Done:** Client/site contact and validation slice — optional NIF + address on clients; required phone/email; `countries` + 9-digit phone; optional contact name/position on clients and sites; HQ copies contact from client; merged `portuguese-nif-and-phone.mdc` rule. Migrations `0008`–`0011`. **95 tests** green.
 
-**Not done:** Production deploy; letterhead; real prices; volume auto-pick; indoor/outdoor auto-pair; VAT on quote math/PDF.
+**Not done:** Production deploy; letterhead; real prices; volume auto-pick; indoor/outdoor auto-pair; VAT on quote math/PDF; contact fields on issued-quote snapshots/PDF.
 
-**Next:** Restart runserver, hard-refresh dashboard Setup (VAT / Parameters / Tubing), then New item should pre-select 23%. Read [`docs/handoff.md`](docs/handoff.md).
+**Next:** Manual test client + site drawers; then VAT-on-quote backlog. Read [`docs/handoff.md`](docs/handoff.md).
 
