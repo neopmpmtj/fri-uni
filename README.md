@@ -2,7 +2,7 @@
 
 Internal HVAC back office for creating **proforma invoices** — client quotes for equipment installation and cost, including an upfront-payment discount. Not an official finance document.
 
-> **Last updated:** 2026-09-06 13:19 WEST
+> **Last updated:** 2026-09-07 06:17 WEST
 
 ## What it does
 
@@ -48,4 +48,4 @@ Demo logins (password `fribila-demo`):
 
 ## Pick up from here
 
-Staff web MVP and CLI are implemented (`proformas`). For a clickable demo run `seed_demo` and log in as the manager. See [`docs/handoff.md`](docs/handoff.md).
+Staff web MVP and CLI are implemented (`proformas`). For a clickable demo run `seed_demo` and log in as the manager. See [`docs/handoff.md`](docs/handoff.md). First code review: [`docs/reviews/code-review-2026-09-07-0617.md`](docs/reviews/code-review-2026-09-07-0617.md).
