@@ -26,6 +26,8 @@ views / management commands  →  proformas/services.py  →  models.py
 - When you notice new plans, features, or follow-ups not yet in the backlog, **ask**: "Should I add this to `docs/project-plan.md`?"
 - When the user says **"put this in the plan"** (or similar), append to `docs/project-plan.md` immediately — do not rely on chat memory
 - Use `.venv/bin/python` for `manage.py` and tests (or activate the venv first)
+- Portuguese **NIF** (`tax_number`) fields: follow [`.cursor/rules/nif-tax-number.mdc`](.cursor/rules/nif-tax-number.mdc); reuse `validate_tax_number` in `proformas/services.py`
+- Portuguese **phone** fields: follow [`.cursor/rules/phone-number.mdc`](.cursor/rules/phone-number.mdc); reuse `validate_phone_number` and `configure_nine_digit_form_field` in `proformas/services.py`
 - Put secrets in root `.env` only; use `.env.example` as the committed template
 - End substantive sessions with `/session-handoff` or skill `session-handoff`
 
@@ -76,7 +78,7 @@ Mark complete during session-handoff: `- [x] ... (completed YYYY-MM-DD)`
 
 | Path | Use |
 |------|-----|
-| [`.cursor/rules/`](.cursor/rules/) | Project rules (`.mdc`) |
+| [`.cursor/rules/`](.cursor/rules/) | Project rules (`.mdc`); includes `nif-tax-number` and `phone-number` |
 | [`.cursor/skills/`](.cursor/skills/) | Project skills (`session-handoff`, `eliciting-project-model`) |
 | [`.cursor/agents/`](.cursor/agents/) | Custom subagents |
 | [`.cursor/commands/`](.cursor/commands/) | Slash commands |

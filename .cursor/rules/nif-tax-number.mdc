@@ -1,0 +1,58 @@
+---
+description: Portuguese NIF (tax_number) validation — reuse validate_tax_number; no silent trim
+globs: **/*.py,templates/**/*.html
+alwaysApply: false
+---
+
+# NIF / tax_number fields
+
+Portuguese fiscal ID (NIF). Applies to any `tax_number` (or equivalent) on clients, suppliers, contacts, or other entities.
+
+**Per-entity required vs optional** — document in [`docs/data-points.md`](docs/data-points.md) for each table. This rule covers *how* to validate when the field exists.
+
+## Canonical implementation
+
+- Logic lives in [`proformas/services.py`](proformas/services.py) → `validate_tax_number`
+- **Always call it** from form `clean_*`, services, and CLI — never duplicate length/checksum logic in views or templates
+- Form field setup: `configure_nine_digit_form_field` in [`proformas/services.py`](proformas/services.py) (shared with phone national numbers)
+
+## Validation rules (when a value is provided)
+
+1. Strip non-digits for length/checksum checks
+2. Fewer than 9 digits → reject (“NIF has fewer than 9 digits.”)
+3. More than 9 digits → reject (“NIF has more than 9 digits.”) — **never truncate or slice**
+4. Exactly 9 digits → existing first-digit + checksum rules in `validate_tax_number`
+5. Empty / whitespace only → allowed only when the entity marks the field optional; save as `""`
+
+## Form and UI (avoid silent truncation)
+
+`CharField(max_length=9)` on the model adds `maxlength=9` and `MaxLengthValidator(9)` on ModelForms. That **silently drops** extra digits before `clean_*` runs.
+
+For every optional or strict-length NIF form field, call `configure_nine_digit_form_field(field, required=...)` from `proformas/services.py` (see [`ClientForm`](proformas/forms.py)).
+
+- Do **not** set HTML `maxlength=9` on NIF inputs
+- Model storage stays `max_length=9`; only validated 9-digit values are saved
+
+## Uniqueness
+
+When live-row uniqueness applies:
+
+- Constraint condition must exclude blank: `~Q(tax_number="")`
+- Duplicate check in `clean_tax_number` only when normalized value is non-empty
+
+## Tests (meaningful only)
+
+When adding a new NIF field, prefer:
+
+- Unit: parametrized wrong lengths (8 and 10 digits) on `validate_tax_number`
+- Integration: 10-digit POST rejected with “more than 9 digits” and no row saved (proves no silent trim)
+
+Skip re-testing Django `required` or checksum if already covered elsewhere.
+
+## Checklist for new/changed NIF fields
+
+- [ ] `docs/data-points.md` states required vs optional for that entity
+- [ ] `clean_*` calls `validate_tax_number` (or skips when blank and optional)
+- [ ] Form field: no `maxlength` / no `MaxLengthValidator(9)` on input
+- [ ] No truncation anywhere in views, services, or JS
+- [ ] Uniqueness constraint excludes `tax_number=""` when applicable

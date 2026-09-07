@@ -56,8 +56,8 @@ def test_admin_can_delete_client(client):
             "postal_code": "1000-099",
             "city": "Lisboa",
             "country_code": "PT",
-            "phone": "",
-            "email": "",
+            "phone": "910000099",
+            "email": "empty@example.com",
         },
     )
     assert response.status_code == 302

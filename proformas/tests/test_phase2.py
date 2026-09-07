@@ -15,6 +15,9 @@ def _client(**kwargs):
         "postal_code": "1000-001",
         "city": "Lisboa",
         "country_code": "PT",
+        "phone_country_id": "PT",
+        "phone": "910000001",
+        "email": "acme@example.com",
     }
     data.update(kwargs)
     return Client.objects.create(**data)

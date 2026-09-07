@@ -23,8 +23,8 @@ def client_post(**overrides):
         "postal_code": "1000-001",
         "city": "Lisboa",
         "country_code": "PT",
-        "phone": "",
-        "email": "",
+        "phone": "910000001",
+        "email": "acme@example.com",
     }
     data.update(overrides)
     return data
@@ -40,14 +40,20 @@ def test_staff_can_create_client_and_site(client, staff_user):
         reverse("site_list"),
         {
             "client": org.pk,
-            "alias_1": "House 1",
-            "alias_2": "",
-            "alias_3": "",
-            "alias_4": "",
-            "street": "Rua Obra 2",
-            "postal_code": "1000-002",
-            "city": "Lisboa",
-            "notes": "",
+            **{
+                "alias_1": "House 1",
+                "alias_2": "",
+                "alias_3": "",
+                "alias_4": "",
+                "street": "Rua Obra 2",
+                "postal_code": "1000-002",
+                "city": "Lisboa",
+                "phone": "920000004",
+                "email": "house1@example.com",
+                "contact_name": "",
+                "contact_position": "",
+                "notes": "",
+            },
         },
     )
     assert response.status_code == 302
@@ -63,6 +69,9 @@ def test_duplicate_live_client_name_rejected(client, staff_user):
         postal_code="1000-001",
         city="Lisboa",
         country_code="PT",
+        phone_country_id="PT",
+        phone="910000002",
+        email="existing@example.com",
     )
     client.force_login(staff_user)
     response = client.post(

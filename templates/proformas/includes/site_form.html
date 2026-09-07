@@ -40,6 +40,31 @@
         {{ form.city.errors }}
     </label>
     <label>
+        <span data-i18n="phone">Phone</span>
+        {{ form.phone_country }}
+        {{ form.phone_country.errors }}
+        <div class="phone-input">
+            <span class="phone-prefix">+351</span>
+            {{ form.phone }}
+        </div>
+        {{ form.phone.errors }}
+    </label>
+    <label>
+        <span data-i18n="email">Email</span>
+        {{ form.email }}
+        {{ form.email.errors }}
+    </label>
+    <label>
+        <span data-i18n="contactName">Contact person</span>
+        {{ form.contact_name }}
+        {{ form.contact_name.errors }}
+    </label>
+    <label>
+        <span data-i18n="contactPosition">Position</span>
+        {{ form.contact_position }}
+        {{ form.contact_position.errors }}
+    </label>
+    <label>
         <span data-i18n="notes">Notes</span>
         {{ form.notes }}
     </label>

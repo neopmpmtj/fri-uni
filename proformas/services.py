@@ -2,6 +2,7 @@ import re
 from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.validators import MaxLengthValidator
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
@@ -10,6 +11,7 @@ from .models import (
     ActorType,
     ChangeLog,
     Client,
+    Country,
     Item,
     Parameter,
     Power,
@@ -86,10 +88,23 @@ def normalize_postal_code(value):
     return f"{digits[:4]}-{digits[4:]}"
 
 
+def configure_nine_digit_form_field(field, *, required: bool) -> None:
+    field.required = required
+    field.max_length = 32
+    field.validators = [
+        validator
+        for validator in field.validators
+        if not isinstance(validator, MaxLengthValidator)
+    ]
+    field.widget.attrs.pop("maxlength", None)
+
+
 def validate_tax_number(value):
     digits = re.sub(r"\D", "", value or "")
-    if len(digits) != 9:
-        raise ValidationError("NIF must be 9 digits.")
+    if len(digits) < 9:
+        raise ValidationError("NIF has fewer than 9 digits.")
+    if len(digits) > 9:
+        raise ValidationError("NIF has more than 9 digits.")
     if digits[0] not in _VALID_NIF_FIRST_DIGITS:
         raise ValidationError("Invalid NIF.")
     total = sum(int(digits[i]) * (9 - i) for i in range(8))
@@ -98,6 +113,19 @@ def validate_tax_number(value):
         check = 0
     if check != int(digits[8]):
         raise ValidationError("Invalid NIF check digit.")
+    return digits
+
+
+def validate_phone_number(value, *, country_code="PT"):
+    country = Country.objects.filter(code=country_code).first()
+    if country is None:
+        raise ValidationError("Unknown phone country.")
+    expected = country.phone_national_digits
+    digits = re.sub(r"\D", "", value or "")
+    if len(digits) < expected:
+        raise ValidationError(f"Phone has fewer than {expected} digits.")
+    if len(digits) > expected:
+        raise ValidationError(f"Phone has more than {expected} digits.")
     return digits
 
 
@@ -374,6 +402,11 @@ def save_client(client, user):
             street=client.street,
             postal_code=client.postal_code,
             city=client.city,
+            phone_country=client.phone_country,
+            phone=client.phone,
+            email=client.email,
+            contact_name=client.contact_name,
+            contact_position=client.contact_position,
             created_by=user,
             updated_by=user,
         )

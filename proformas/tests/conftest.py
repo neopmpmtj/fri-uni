@@ -34,6 +34,9 @@ def site(db):
         postal_code="1000-001",
         city="Lisboa",
         country_code="PT",
+        phone_country_id="PT",
+        phone="910000001",
+        email="acme@example.com",
     )
     return Site.objects.create(
         client=org,
@@ -41,6 +44,9 @@ def site(db):
         street="Rua Obra 2",
         postal_code="1000-002",
         city="Lisboa",
+        phone_country_id="PT",
+        phone="920000002",
+        email="obra@example.com",
     )
 
 

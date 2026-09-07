@@ -111,8 +111,10 @@ DEMO_CLIENTS = (
         "postal_code": "1250-140",
         "city": "Lisboa",
         "country_code": "PT",
-        "phone": "+351 21 000 1100",
+        "phone": "210001100",
         "email": "obras@atlantico.example",
+        "contact_name": "João Pereira",
+        "contact_position": "ceo",
         "sites": (
             {
                 "alias_1": "Moradia Cascais",
@@ -140,7 +142,7 @@ DEMO_CLIENTS = (
         "postal_code": "1100-060",
         "city": "Lisboa",
         "country_code": "PT",
-        "phone": "+351 21 000 2200",
+        "phone": "210002200",
         "email": "obras@tejo.example",
         "sites": (
             {
@@ -160,7 +162,7 @@ DEMO_CLIENTS = (
         "postal_code": "4000-322",
         "city": "Porto",
         "country_code": "PT",
-        "phone": "+351 22 000 3300",
+        "phone": "220003300",
         "email": "manutencao@brisaazul.example",
         "sites": (
             {
@@ -364,8 +366,11 @@ def _seed_clients_and_sites(actor):
             "postal_code": spec["postal_code"],
             "city": spec["city"],
             "country_code": spec.get("country_code", "PT"),
+            "phone_country_id": spec.get("phone_country", "PT"),
             "phone": spec.get("phone", ""),
             "email": spec.get("email", ""),
+            "contact_name": spec.get("contact_name", ""),
+            "contact_position": spec.get("contact_position", ""),
             "created_by": actor,
             "updated_by": actor,
         }
@@ -382,6 +387,11 @@ def _seed_clients_and_sites(actor):
                 street=client.street,
                 postal_code=client.postal_code,
                 city=client.city,
+                phone_country=client.phone_country,
+                phone=client.phone,
+                email=client.email,
+                contact_name=client.contact_name,
+                contact_position=client.contact_position,
                 created_by=actor,
                 updated_by=actor,
             )
@@ -394,6 +404,11 @@ def _seed_clients_and_sites(actor):
                 "street": site_spec["street"],
                 "postal_code": site_spec["postal_code"],
                 "city": site_spec["city"],
+                "phone_country_id": site_spec.get("phone_country", client.phone_country_id),
+                "phone": site_spec.get("phone", client.phone),
+                "email": site_spec.get("email", client.email),
+                "contact_name": site_spec.get("contact_name", ""),
+                "contact_position": site_spec.get("contact_position", ""),
                 "notes": site_spec.get("notes", ""),
                 "created_by": actor,
                 "updated_by": actor,

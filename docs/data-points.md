@@ -89,6 +89,19 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 - Extra activity table: no
 - Notes: staff may edit `value` on known keys only. No create or delete of parameter rows from the setup page.
 
+### countries
+
+- Purpose: dial-code lookup for phone national numbers (billing address `country_code` on clients stays a separate field for now)
+- Written by (apps): migration seed (staff web app reads only for now)
+- Fields:
+  - `code` — text, required (ISO 3166-1 alpha-2, primary key; e.g. `PT`)
+  - `name` — text, required
+  - `dial_code` — text, required (digits only, no `+`; e.g. `351`)
+  - `phone_national_digits` — integer, required (expected national number length for that country)
+- Seed set (initial): Portugal (`PT`, 9), Spain (`ES`, 9), France (`FR`, 9), Germany (`DE`, 10), Belgium (`BE`, 9)
+- Uniqueness: `code`
+- Notes: UI currently defaults phone country to Portugal and disables the selector; validation uses the row’s `phone_national_digits`.
+
 ### clients
 
 - Purpose: customer for invoicing (private person or company)
@@ -96,15 +109,18 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 - Fields (plus always-on):
   - `kind` — enum `person` | `company`, required
   - `name` — text, required (invoice name)
-  - `tax_number` — text, required (Portuguese NIF, 9 digits, live unique)
-  - `street` — text, required (billing / legal address)
-  - `postal_code` — text, required (`NNNN-NNN`)
-  - `city` — text, required
-  - `country_code` — text, required (default `PT`)
-  - `phone` — text, optional
-  - `email` — text, optional
+  - `phone_country` — fk → `countries`, required (default `PT`; UI disabled for now)
+  - `phone` — text, required (national digits only, 9 for Portugal; no `+` prefix stored)
+  - `email` — text, required
+  - `contact_name` — text, optional
+  - `contact_position` — enum `ceo` | `cfo` | `manager` | `director` | `other`, optional
+  - `country_code` — text, required (billing address country; default `PT`)
+  - `tax_number` — text, optional (Portuguese NIF, 9 digits when set, live unique among non-blank)
+  - `street` — text, optional (billing / legal address)
+  - `postal_code` — text, optional (`NNNN-NNN` when set)
+  - `city` — text, optional
 - Relationships: has many `sites`; on create the app auto-creates one headquarters site (`is_headquarters`, `alias_1` = client name, billing address copied once)
-- Uniqueness: live `name`; live `tax_number`
+- Uniqueness: live `name`; live non-blank `tax_number`
 - Reason-required fields: none
 - Extra history table: no
 - Extra activity table: no
@@ -124,6 +140,11 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
   - `street` — text, required
   - `postal_code` — text, required (`NNNN-NNN`)
   - `city` — text, required
+  - `phone_country` — fk → `countries`, required (default `PT`; UI disabled for now)
+  - `phone` — text, required (national digits only, 9 for Portugal)
+  - `email` — text, required
+  - `contact_name` — text, optional
+  - `contact_position` — enum `ceo` | `cfo` | `manager` | `director` | `other`, optional
   - `notes` — text, optional
 - Relationships: belongs to one `client`; has many `proformas`
 - Uniqueness: at most one live `is_headquarters` per client

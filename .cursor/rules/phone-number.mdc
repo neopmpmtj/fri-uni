@@ -1,0 +1,58 @@
+---
+description: Portuguese phone numbers — reuse validate_phone_number; national digits + country dial code; no silent trim
+globs: **/*.py,templates/**/*.html
+alwaysApply: false
+---
+
+# Phone / national number fields
+
+Applies to client `phone` and any future phone fields on suppliers, contacts, etc.
+
+**Per-entity required vs optional** — document in [`docs/data-points.md`](docs/data-points.md). **Phone country** — fk → `countries` table (dial code + expected national length).
+
+## Canonical implementation
+
+- Logic: [`proformas/services.py`](proformas/services.py) → `validate_phone_number(value, country_code=...)`
+- Form field setup: `configure_nine_digit_form_field` in the same module (shared with NIF)
+- Reference form: [`ClientForm`](proformas/forms.py) (`clean_phone`, `phone_country`, `__init__`)
+
+## Validation rules (when a value is provided)
+
+1. Strip non-digits for length checks
+2. Load expected length from `Country.phone_national_digits` for the given `country_code`
+3. Fewer than expected → reject (`Phone has fewer than N digits.`)
+4. More than expected → reject (`Phone has more than N digits.`) — **never truncate or slice**
+5. Exactly expected length → return digit string (no checksum)
+
+Empty values: only when the entity marks phone optional (clients require phone per data-points).
+
+## UI pattern (clients today)
+
+- `phone_country` selector: default Portugal, **disabled** until more countries are enabled
+- User types **national digits only**; template shows `+351` (or dial code) as a visual prefix
+- Store `phone` as national digits only (`max_length=9` for PT); do not store `+351` in `phone`
+
+## Form and UI (avoid silent truncation)
+
+Same as NIF — use `configure_nine_digit_form_field` on the national-number input:
+
+- No HTML `maxlength=9` on the input
+- No `MaxLengthValidator(9)` on the form field (model may still use `max_length=9` for storage)
+
+Disabled `phone_country` is omitted from POST — set in `ClientForm.clean()` from instance or default `PT`.
+
+## Tests (meaningful only)
+
+When adding a new phone field:
+
+- Unit: parametrized 8- and 10-digit input for PT (fewer/more messages)
+- Unit: valid 9-digit acceptance
+- Integration: 10-digit POST rejected, row not saved (no silent trim)
+
+## Checklist for new/changed phone fields
+
+- [ ] `docs/data-points.md` documents `phone_country` + national `phone` for that entity
+- [ ] `clean_*` calls `validate_phone_number` with the correct `country_code`
+- [ ] National input uses `configure_nine_digit_form_field`
+- [ ] No truncation in views, services, or JS
+- [ ] Seed/fixtures use 9-digit national values (not `+351 …`)

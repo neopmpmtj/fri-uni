@@ -73,6 +73,27 @@ class Parameter(AuditedModel):
         return self.key
 
 
+class Country(models.Model):
+    code = models.CharField(max_length=2, primary_key=True)
+    name = models.CharField(max_length=64)
+    dial_code = models.CharField(max_length=4)
+    phone_national_digits = models.PositiveSmallIntegerField()
+
+    class Meta:
+        verbose_name_plural = "countries"
+
+    def __str__(self):
+        return self.name
+
+
+class ContactPosition(models.TextChoices):
+    CEO = "ceo", "CEO"
+    CFO = "cfo", "CFO"
+    MANAGER = "manager", "Manager"
+    DIRECTOR = "director", "Director"
+    OTHER = "other", "Other"
+
+
 class Client(AuditedModel):
     class Kind(models.TextChoices):
         PERSON = "person", "Person"
@@ -80,13 +101,23 @@ class Client(AuditedModel):
 
     kind = models.CharField(max_length=16, choices=Kind.choices)
     name = models.CharField(max_length=255)
-    tax_number = models.CharField(max_length=9)
-    street = models.CharField(max_length=255)
-    postal_code = models.CharField(max_length=8)
-    city = models.CharField(max_length=128)
+    tax_number = models.CharField(max_length=9, blank=True)
+    street = models.CharField(max_length=255, blank=True)
+    postal_code = models.CharField(max_length=8, blank=True)
+    city = models.CharField(max_length=128, blank=True)
     country_code = models.CharField(max_length=2, default="PT")
-    phone = models.CharField(max_length=64, blank=True)
-    email = models.EmailField(blank=True)
+    phone_country = models.ForeignKey(
+        Country,
+        on_delete=models.PROTECT,
+        default="PT",
+        related_name="+",
+    )
+    phone = models.CharField(max_length=9)
+    email = models.EmailField()
+    contact_name = models.CharField(max_length=255, blank=True)
+    contact_position = models.CharField(
+        max_length=16, choices=ContactPosition.choices, blank=True
+    )
 
     class Meta:
         constraints = [
@@ -97,7 +128,7 @@ class Client(AuditedModel):
             ),
             UniqueConstraint(
                 fields=["tax_number"],
-                condition=Q(deleted_at__isnull=True),
+                condition=Q(deleted_at__isnull=True) & ~Q(tax_number=""),
                 name="uniq_live_client_tax_number",
             ),
         ]
@@ -116,6 +147,18 @@ class Site(AuditedModel):
     street = models.CharField(max_length=255)
     postal_code = models.CharField(max_length=8)
     city = models.CharField(max_length=128)
+    phone_country = models.ForeignKey(
+        Country,
+        on_delete=models.PROTECT,
+        default="PT",
+        related_name="+",
+    )
+    phone = models.CharField(max_length=9)
+    email = models.EmailField()
+    contact_name = models.CharField(max_length=255, blank=True)
+    contact_position = models.CharField(
+        max_length=16, choices=ContactPosition.choices, blank=True
+    )
     notes = models.TextField(blank=True)
 
     class Meta:

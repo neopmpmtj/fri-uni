@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from .models import (
     Brand,
     Client,
+    Country,
     Family,
     Item,
     Parameter,
@@ -15,10 +16,12 @@ from .models import (
     VatRate,
 )
 from .services import (
+    configure_nine_digit_form_field,
     normalize_postal_code,
     percent_to_rate,
     validate_internal_code,
     validate_item_identity,
+    validate_phone_number,
     validate_power_uniqueness,
     validate_tax_number,
     validate_vat_code,
@@ -36,8 +39,11 @@ class ClientForm(forms.ModelForm):
             "postal_code",
             "city",
             "country_code",
+            "phone_country",
             "phone",
             "email",
+            "contact_name",
+            "contact_position",
         )
 
     def __init__(self, *args, **kwargs):
@@ -48,6 +54,30 @@ class ClientForm(forms.ModelForm):
         self.fields["country_code"].widget = forms.Select(
             choices=[("PT", "Portugal")]
         )
+        configure_nine_digit_form_field(self.fields["tax_number"], required=False)
+        self.fields["street"].required = False
+        self.fields["postal_code"].required = False
+        self.fields["city"].required = False
+        self.fields["phone_country"].queryset = Country.objects.order_by("name")
+        self.fields["phone_country"].disabled = True
+        self.fields["phone_country"].label_from_instance = (
+            lambda obj: f"{obj.name} (+{obj.dial_code})"
+        )
+        if not self.instance.pk:
+            self.fields["phone_country"].initial = "PT"
+        configure_nine_digit_form_field(self.fields["phone"], required=True)
+        self.fields["email"].required = True
+        self.fields["contact_name"].required = False
+        self.fields["contact_position"].required = False
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.fields["phone_country"].disabled:
+            if self.instance.pk and self.instance.phone_country_id:
+                cleaned["phone_country"] = self.instance.phone_country
+            else:
+                cleaned["phone_country"] = Country.objects.get(code="PT")
+        return cleaned
 
     def clean_name(self):
         name = self.cleaned_data["name"].strip()
@@ -59,7 +89,10 @@ class ClientForm(forms.ModelForm):
         return name
 
     def clean_tax_number(self):
-        tax_number = validate_tax_number(self.cleaned_data["tax_number"])
+        raw = (self.cleaned_data.get("tax_number") or "").strip()
+        if not raw:
+            return ""
+        tax_number = validate_tax_number(raw)
         qs = Client.objects.filter(tax_number=tax_number)
         if self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
@@ -67,14 +100,29 @@ class ClientForm(forms.ModelForm):
             raise ValidationError("A live client with this NIF already exists.")
         return tax_number
 
+    def clean_phone(self):
+        if self.instance.pk and self.instance.phone_country_id:
+            country_code = self.instance.phone_country_id
+        else:
+            country_code = "PT"
+        return validate_phone_number(
+            self.cleaned_data["phone"], country_code=country_code
+        )
+
     def clean_postal_code(self):
-        return normalize_postal_code(self.cleaned_data["postal_code"])
+        raw = (self.cleaned_data.get("postal_code") or "").strip()
+        if not raw:
+            return ""
+        return normalize_postal_code(raw)
 
     def clean_street(self):
         return self.cleaned_data["street"].strip()
 
     def clean_city(self):
         return self.cleaned_data["city"].strip()
+
+    def clean_contact_name(self):
+        return (self.cleaned_data.get("contact_name") or "").strip()
 
 
 class SiteForm(forms.ModelForm):
@@ -89,6 +137,11 @@ class SiteForm(forms.ModelForm):
             "street",
             "postal_code",
             "city",
+            "phone_country",
+            "phone",
+            "email",
+            "contact_name",
+            "contact_position",
             "notes",
         )
         widgets = {"notes": forms.Textarea(attrs={"rows": 3})}
@@ -97,6 +150,26 @@ class SiteForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance.pk and self.instance.is_headquarters:
             self.fields["client"].disabled = True
+        self.fields["phone_country"].queryset = Country.objects.order_by("name")
+        self.fields["phone_country"].disabled = True
+        self.fields["phone_country"].label_from_instance = (
+            lambda obj: f"{obj.name} (+{obj.dial_code})"
+        )
+        if not self.instance.pk:
+            self.fields["phone_country"].initial = "PT"
+        configure_nine_digit_form_field(self.fields["phone"], required=True)
+        self.fields["email"].required = True
+        self.fields["contact_name"].required = False
+        self.fields["contact_position"].required = False
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.fields["phone_country"].disabled:
+            if self.instance.pk and self.instance.phone_country_id:
+                cleaned["phone_country"] = self.instance.phone_country
+            else:
+                cleaned["phone_country"] = Country.objects.get(code="PT")
+        return cleaned
 
     def clean_client(self):
         client = self.cleaned_data["client"]
@@ -110,6 +183,15 @@ class SiteForm(forms.ModelForm):
     def clean_postal_code(self):
         return normalize_postal_code(self.cleaned_data["postal_code"])
 
+    def clean_phone(self):
+        if self.instance.pk and self.instance.phone_country_id:
+            country_code = self.instance.phone_country_id
+        else:
+            country_code = "PT"
+        return validate_phone_number(
+            self.cleaned_data["phone"], country_code=country_code
+        )
+
     def clean_street(self):
         return self.cleaned_data["street"].strip()
 
@@ -118,6 +200,9 @@ class SiteForm(forms.ModelForm):
 
     def clean_alias_1(self):
         return self.cleaned_data["alias_1"].strip()
+
+    def clean_contact_name(self):
+        return (self.cleaned_data.get("contact_name") or "").strip()
 
 
 class NewDraftForm(forms.Form):
