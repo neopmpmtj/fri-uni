@@ -1,10 +1,18 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
+from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
 
 from accounts.models import User
 from proformas.models import Item, Site, TubingLength
 from proformas.services import add_line, create_draft, issue_proforma
+
+
+def _command_message(exc):
+    if hasattr(exc, "messages"):
+        return " ".join(str(message) for message in exc.messages)
+    return str(exc)
 
 
 class Command(BaseCommand):
@@ -29,46 +37,75 @@ class Command(BaseCommand):
             user = User.objects.get(email=options["user"])
         except User.DoesNotExist as exc:
             raise CommandError(f"Unknown user {options['user']}") from exc
+        if not user.is_active:
+            raise CommandError(f"Inactive user {options['user']}")
         try:
             site = Site.objects.get(pk=options["site"])
         except Site.DoesNotExist as exc:
             raise CommandError(f"Unknown site {options['site']}") from exc
 
         draft_kwargs = {"observations": options["observations"] or ""}
-        if options["discount_percent"] is not None:
-            draft_kwargs["discount_percent"] = Decimal(str(options["discount_percent"]))
-        if options["extra_labour"] is not None:
-            draft_kwargs["extra_labour"] = Decimal(str(options["extra_labour"]))
-
-        proforma = create_draft(site, user, **draft_kwargs)
-        for spec in options["line"]:
-            parts = spec.split(":")
-            if len(parts) not in (2, 3):
-                raise CommandError(
-                    "Each --line must be item_id:qty or item_id:qty:tubing_length_id"
+        try:
+            if options["discount_percent"] is not None:
+                draft_kwargs["discount_percent"] = Decimal(
+                    str(options["discount_percent"])
                 )
-            try:
-                item = Item.objects.get(pk=int(parts[0]))
-            except Item.DoesNotExist as exc:
-                raise CommandError(f"Unknown item {parts[0]}") from exc
-            quantity = int(parts[1])
-            tubing = None
-            extra = False
-            if len(parts) == 3:
-                try:
-                    tubing = TubingLength.objects.get(pk=int(parts[2]))
-                except TubingLength.DoesNotExist as exc:
-                    raise CommandError(f"Unknown tubing length {parts[2]}") from exc
-                extra = True
-            add_line(
-                proforma,
-                item,
-                user,
-                quantity=quantity,
-                extra_tubing=extra,
-                tubing_length=tubing,
-            )
-        if options["issue"]:
-            issue_proforma(proforma, user)
+            if options["extra_labour"] is not None:
+                draft_kwargs["extra_labour"] = Decimal(str(options["extra_labour"]))
+        except (InvalidOperation, TypeError) as exc:
+            raise CommandError("Invalid discount percent or extra labour.") from exc
+
+        try:
+            with transaction.atomic():
+                proforma = create_draft(site, user, **draft_kwargs)
+                for spec in options["line"]:
+                    parts = spec.split(":")
+                    if len(parts) not in (2, 3):
+                        raise CommandError(
+                            "Each --line must be item_id:qty or "
+                            "item_id:qty:tubing_length_id"
+                        )
+                    try:
+                        item_id = int(parts[0])
+                        quantity = int(parts[1])
+                    except ValueError as exc:
+                        raise CommandError(
+                            "Each --line must be item_id:qty or "
+                            "item_id:qty:tubing_length_id"
+                        ) from exc
+                    try:
+                        item = Item.objects.get(pk=item_id)
+                    except Item.DoesNotExist as exc:
+                        raise CommandError(f"Unknown item {parts[0]}") from exc
+                    tubing = None
+                    extra = False
+                    if len(parts) == 3:
+                        try:
+                            tubing_id = int(parts[2])
+                        except ValueError as exc:
+                            raise CommandError(
+                                "Each --line must be item_id:qty or "
+                                "item_id:qty:tubing_length_id"
+                            ) from exc
+                        try:
+                            tubing = TubingLength.objects.get(pk=tubing_id)
+                        except TubingLength.DoesNotExist as exc:
+                            raise CommandError(
+                                f"Unknown tubing length {parts[2]}"
+                            ) from exc
+                        extra = True
+                    add_line(
+                        proforma,
+                        item,
+                        user,
+                        quantity=quantity,
+                        extra_tubing=extra,
+                        tubing_length=tubing,
+                    )
+                if options["issue"]:
+                    issue_proforma(proforma, user)
+        except ValidationError as exc:
+            raise CommandError(_command_message(exc)) from exc
+
         proforma.refresh_from_db()
         self.stdout.write(proforma.number)

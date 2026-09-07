@@ -1,6 +1,6 @@
 # Session handoff
 
-> **Last updated:** 2026-09-06 16:51 WEST (Europe/Lisbon)  
+> **Last updated:** 2026-09-07 06:50 WEST (Europe/Lisbon)  
 > Replace with the current date and time whenever you edit this file.
 
 ## Project
@@ -15,12 +15,11 @@ Staff app is **`proformas`** (`accounts` is User/login only). Playbook: [`docs/p
 
 Catalog: **family → sub-family → item**, plus **manufacturer** (`Brand`) and **VAT rate** on the item. Sales price is edited only on the manufacturer pricelist (reason required). Django admin is users and audit only.
 
-On branch `cursor/convert-to-warehouse-style` (one commit already on origin). This VAT/setup slice is **uncommitted**. Do not run `seed_demo` in production.
-
-Local DB has migration `proformas.0003_vat_rates`. If `db.sqlite3` is missing: `migrate` then `seed_demo`. Restart `runserver` after that.
+Do not run `seed_demo` in production. If `db.sqlite3` is missing: `migrate` then `seed_demo`. Restart `runserver` after that.
 
 ## Done
 
+- Phases 1–8: login/`role`/dashboard i18n, models, clients/sites drawers, draft quoting, issue/cancel snapshots, on-screen quote + WeasyPrint PDF, `create_proforma` CLI
 - Catalog schema: `Family`, `SubFamily`, `Item` with `internal_code`, `is_default`, optional `max_volume_m3`, required `vat_rate`
 - `VatRate`: Portugal IVA seed 23% (default), 13%, 6%, Exempt; staff enter percent, stored 0–1
 - Dashboard daily cards (Clients, Sites, Proformas, Items) and setup cards (Families, Sub-families, Manufacturers, VAT rates, Parameters, Tubing lengths)
@@ -30,7 +29,7 @@ Local DB has migration `proformas.0003_vat_rates`. If `db.sqlite3` is missing: `
 - Line drawer: Family → Sub-family → Manufacturer → Item; defaults pre-select AC then Split
 - Seed: AC (default), underfloor, DHW; all items `VAT23`; 9000 BTU indoor `max_volume_m3=20`
 - `seed_demo`: admin + manager. Manager cannot soft-delete
-- pytest: 40 passed
+- Code review at [`docs/reviews/code-review-2026-09-07-0617.md`](reviews/code-review-2026-09-07-0617.md); review remediations merged onto this catalog tree (CLI atomicity, snapshots, delete-in-use, validation)
 
 ## Not done
 
@@ -41,7 +40,6 @@ Local DB has migration `proformas.0003_vat_rates`. If `db.sqlite3` is missing: `
 - Indoor/outdoor auto-pair (`model_default_matches`)
 - VAT on proforma line math / snapshots / PDF
 - Email send / stored PDFs / Google OAuth / dark theme
-- Commit of this slice (not requested)
 
 ## Next
 

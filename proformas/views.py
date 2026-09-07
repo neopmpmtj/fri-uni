@@ -1,5 +1,6 @@
 from decimal import Decimal, InvalidOperation
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.http import Http404, HttpResponse
@@ -90,6 +91,12 @@ def _save_audited(form, user):
     return obj
 
 
+def _validation_message(exc):
+    if hasattr(exc, "messages"):
+        return " ".join(str(message) for message in exc.messages)
+    return str(exc)
+
+
 @login_required
 def client_list(request):
     editing = None
@@ -97,7 +104,10 @@ def client_list(request):
     if request.method == "POST":
         pk = request.POST.get("id")
         if request.POST.get("action") == "delete" and pk:
-            services.delete_client(get_object_or_404(Client, pk=pk), request.user)
+            try:
+                services.delete_client(get_object_or_404(Client, pk=pk), request.user)
+            except ValidationError as exc:
+                messages.error(request, _validation_message(exc))
             return redirect("client_list")
         instance = get_object_or_404(Client, pk=pk) if pk else None
         form = ClientForm(request.POST, instance=instance)
@@ -137,7 +147,10 @@ def site_list(request):
     if request.method == "POST":
         pk = request.POST.get("id")
         if request.POST.get("action") == "delete" and pk:
-            services.delete_site(get_object_or_404(Site, pk=pk), request.user)
+            try:
+                services.delete_site(get_object_or_404(Site, pk=pk), request.user)
+            except ValidationError as exc:
+                messages.error(request, _validation_message(exc))
             return redirect("site_list")
         instance = get_object_or_404(Site, pk=pk) if pk else None
         form = SiteForm(request.POST, instance=instance)
@@ -227,58 +240,82 @@ def proforma_detail(request, pk):
 
     if request.method == "POST":
         action = request.POST.get("action")
-        if action == "save_header" and is_draft:
-            header_form = ProformaHeaderForm(request.POST)
-            if header_form.is_valid():
-                services.update_draft(
-                    proforma,
-                    request.user,
-                    upfront_discount_percent=header_form.cleaned_data[
-                        "upfront_discount_percent"
-                    ],
-                    extra_labour=header_form.cleaned_data["extra_labour"],
-                    observations=header_form.cleaned_data["observations"],
-                )
-                return redirect("proforma_detail", pk=proforma.pk)
-        elif action == "delete_line" and is_draft:
-            line = get_object_or_404(ProformaLine, pk=request.POST.get("id"), proforma=proforma)
-            services.remove_line(line, request.user)
+        if action in {"save_header", "delete_line", "save_line", "issue"} and not is_draft:
+            messages.error(request, "Only draft proformas can be edited.")
             return redirect("proforma_detail", pk=proforma.pk)
-        elif action == "save_line" and is_draft:
-            pk_line = request.POST.get("id")
-            instance = (
-                get_object_or_404(ProformaLine, pk=pk_line, proforma=proforma)
-                if pk_line
-                else None
-            )
-            line_form = ProformaLineForm(request.POST, instance=instance)
-            if line_form.is_valid():
-                data = line_form.cleaned_data
-                if instance:
-                    services.update_line(
-                        instance,
-                        request.user,
-                        item=data["item"],
-                        quantity=data["quantity"],
-                        extra_tubing=data["extra_tubing"],
-                        tubing_length=data["tubing_length"],
-                    )
-                else:
-                    services.add_line(
+        if action == "cancel_proforma" and proforma.status != Proforma.Status.ISSUED:
+            messages.error(request, "Only issued proformas can be cancelled.")
+            return redirect("proforma_detail", pk=proforma.pk)
+        try:
+            if action == "save_header" and is_draft:
+                header_form = ProformaHeaderForm(request.POST)
+                if header_form.is_valid():
+                    services.update_draft(
                         proforma,
-                        data["item"],
                         request.user,
-                        quantity=data["quantity"],
-                        extra_tubing=data["extra_tubing"],
-                        tubing_length=data["tubing_length"],
+                        upfront_discount_percent=header_form.cleaned_data[
+                            "upfront_discount_percent"
+                        ],
+                        extra_labour=header_form.cleaned_data["extra_labour"],
+                        observations=header_form.cleaned_data["observations"],
                     )
+                    return redirect("proforma_detail", pk=proforma.pk)
+            elif action == "delete_line" and is_draft:
+                line = get_object_or_404(
+                    ProformaLine, pk=request.POST.get("id"), proforma=proforma
+                )
+                services.remove_line(line, request.user)
                 return redirect("proforma_detail", pk=proforma.pk)
-            editing_line = instance
-        elif action == "issue" and is_draft:
-            services.issue_proforma(proforma, request.user)
-            return redirect("proforma_detail", pk=proforma.pk)
-        elif action == "cancel_proforma" and proforma.status == Proforma.Status.ISSUED:
-            services.cancel_proforma(proforma, request.user)
+            elif action == "save_line" and is_draft:
+                pk_line = request.POST.get("id")
+                instance = (
+                    get_object_or_404(ProformaLine, pk=pk_line, proforma=proforma)
+                    if pk_line
+                    else None
+                )
+                line_form = ProformaLineForm(request.POST, instance=instance)
+                if line_form.is_valid():
+                    data = line_form.cleaned_data
+                    if instance:
+                        services.update_line(
+                            instance,
+                            request.user,
+                            item=data["item"],
+                            quantity=data["quantity"],
+                            extra_tubing=data["extra_tubing"],
+                            tubing_length=data["tubing_length"],
+                        )
+                    else:
+                        services.add_line(
+                            proforma,
+                            data["item"],
+                            request.user,
+                            quantity=data["quantity"],
+                            extra_tubing=data["extra_tubing"],
+                            tubing_length=data["tubing_length"],
+                        )
+                    return redirect("proforma_detail", pk=proforma.pk)
+                editing_line = instance
+            elif action == "issue" and is_draft:
+                header_form = ProformaHeaderForm(request.POST)
+                if header_form.is_valid():
+                    services.update_draft(
+                        proforma,
+                        request.user,
+                        upfront_discount_percent=header_form.cleaned_data[
+                            "upfront_discount_percent"
+                        ],
+                        extra_labour=header_form.cleaned_data["extra_labour"],
+                        observations=header_form.cleaned_data["observations"],
+                    )
+                    proforma.refresh_from_db()
+                    services.issue_proforma(proforma, request.user)
+                    return redirect("proforma_detail", pk=proforma.pk)
+            elif action == "cancel_proforma" and proforma.status == Proforma.Status.ISSUED:
+                services.cancel_proforma(proforma, request.user)
+                return redirect("proforma_detail", pk=proforma.pk)
+        except ValidationError as exc:
+            messages.error(request, _validation_message(exc))
             return redirect("proforma_detail", pk=proforma.pk)
 
     if request.GET.get("line"):
@@ -715,6 +752,3 @@ def tubing_length_list(request):
             "page_title": "Tubing lengths",
         },
     )
-
-
-

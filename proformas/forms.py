@@ -66,8 +66,10 @@ class NewDraftForm(forms.Form):
 
 
 class ProformaHeaderForm(forms.Form):
-    upfront_discount_percent = forms.DecimalField(max_digits=5, decimal_places=2)
-    extra_labour = forms.DecimalField(max_digits=12, decimal_places=2)
+    upfront_discount_percent = forms.DecimalField(
+        max_digits=5, decimal_places=2, min_value=0, max_value=100
+    )
+    extra_labour = forms.DecimalField(max_digits=12, decimal_places=2, min_value=0)
     observations = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}))
 
 
@@ -92,6 +94,7 @@ class DataDefaultSelect(forms.Select):
 
 
 class ProformaLineForm(forms.ModelForm):
+    quantity = forms.IntegerField(min_value=1)
     family = forms.ModelChoiceField(
         queryset=Family.objects.none(), required=False, widget=DataDefaultSelect
     )
