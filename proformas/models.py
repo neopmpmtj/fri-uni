@@ -417,6 +417,7 @@ class Proforma(AuditedModel):
     status = models.CharField(
         max_length=16, choices=Status.choices, default=Status.DRAFT
     )
+    accepted_at = models.DateTimeField(null=True, blank=True)
     upfront_discount_percent = models.DecimalField(max_digits=5, decimal_places=2)
     extra_labour = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     observations = models.TextField(blank=True)

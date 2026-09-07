@@ -15,7 +15,7 @@
 {% endblock %}
 
 {% block content %}
-<p class="muted">{% if is_draft %}{{ proforma.site.client.name }} / {{ proforma.site.alias_1 }}{% else %}{{ proforma.client_name }} / {{ proforma.site_alias_1 }}{% endif %} — {{ proforma.get_status_display }}</p>
+<p class="muted">{% if is_draft %}{{ proforma.site.client.name }} / {{ proforma.site.alias_1 }}{% else %}{{ proforma.client_name }} / {{ proforma.site_alias_1 }}{% endif %} — <span class="status-pill status-pill--{{ proforma.status }}">{{ proforma.get_status_display }}</span>{% if is_accepted %} <span class="status-pill status-pill--accepted" data-i18n="accepted">Accepted</span>{% endif %}</p>
 
 <form method="post" class="header-fields">
     {% csrf_token %}
@@ -42,6 +42,11 @@
     {% endif %}
     {% if is_issued %}
     <div>
+        {% if is_accepted %}
+        <button type="submit" name="action" value="unaccept_proforma" class="btn ghost" form="issue-form" data-i18n="clearAccepted">Clear accepted</button>
+        {% else %}
+        <button type="submit" name="action" value="accept_proforma" class="btn primary" form="issue-form" data-i18n="markAccepted">Mark accepted</button>
+        {% endif %}
         <button type="submit" name="action" value="cancel_proforma" class="btn danger" form="issue-form" data-i18n="cancel">Cancel</button>
         <a class="btn primary" href="{% url 'proforma_quote' proforma.pk %}" data-i18n="viewQuote">View quote</a>
         <a class="btn ghost" href="{% url 'proforma_pdf' proforma.pk %}" data-i18n="downloadPdf">Download PDF</a>

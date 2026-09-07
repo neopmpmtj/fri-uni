@@ -5,10 +5,12 @@ from django.core.exceptions import ValidationError
 
 from proformas.models import ActivityLog, Proforma
 from proformas.services import (
+    accept_proforma,
     add_line,
     cancel_proforma,
     create_draft,
     issue_proforma,
+    unaccept_proforma,
     update_draft,
 )
 
@@ -74,3 +76,40 @@ def test_cancel_does_not_return_to_draft(issued, staff_user):
     assert ActivityLog.objects.filter(action="cancel_proforma").exists()
     with pytest.raises(ValidationError):
         update_draft(issued, staff_user, observations="nope")
+
+
+def test_accept_sets_accepted_at(issued, staff_user):
+    accept_proforma(issued, staff_user)
+    issued.refresh_from_db()
+    assert issued.accepted_at is not None
+    assert issued.status == Proforma.Status.ISSUED
+    assert ActivityLog.objects.filter(action="accept_proforma").exists()
+
+
+def test_unaccept_clears_accepted_at(issued, staff_user):
+    accept_proforma(issued, staff_user)
+    unaccept_proforma(issued, staff_user)
+    issued.refresh_from_db()
+    assert issued.accepted_at is None
+    assert ActivityLog.objects.filter(action="unaccept_proforma").exists()
+
+
+def test_accept_only_on_issued(staff_user, site, indoor):
+    draft = create_draft(site, staff_user)
+    add_line(draft, indoor, staff_user, quantity=1)
+    with pytest.raises(ValidationError, match="issued"):
+        accept_proforma(draft, staff_user)
+
+
+def test_accept_rejected_when_already_accepted(issued, staff_user):
+    accept_proforma(issued, staff_user)
+    with pytest.raises(ValidationError, match="already"):
+        accept_proforma(issued, staff_user)
+
+
+def test_cancel_clears_accepted_at(issued, staff_user):
+    accept_proforma(issued, staff_user)
+    cancel_proforma(issued, staff_user)
+    issued.refresh_from_db()
+    assert issued.status == Proforma.Status.CANCELLED
+    assert issued.accepted_at is None

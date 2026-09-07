@@ -24,6 +24,7 @@ def test_seed_demo_creates_users_clients_and_quotes():
     assert Proforma.objects.filter(status=Proforma.Status.ISSUED).count() == 2
     assert Proforma.objects.filter(status=Proforma.Status.DRAFT).count() == 2
     assert Proforma.objects.filter(status=Proforma.Status.CANCELLED).count() == 1
+    assert Proforma.objects.filter(accepted_at__isnull=False).count() == 1
     assert Proforma.objects.count() == 5
 
 

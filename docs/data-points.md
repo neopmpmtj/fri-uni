@@ -278,6 +278,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
   - `site` — fk → `sites`, required (client is that site’s client)
   - `number` — text, required; format `PF-YYYY-NNNN` (`YYYY` = create year, `NNNN` = 4-digit per-year sequence); assigned on create
   - `status` — enum `draft` | `issued` | `cancelled`, required
+  - `accepted_at` — datetime, optional; null = not accepted yet. Set only on `issued` rows when staff mark that the quote went through (client accepted and/or install done). Cleared when staff unmark or when the proforma is cancelled. Not a money field; freeze rules unchanged.
   - `upfront_discount_percent` — number, required (copied from parameters on create; overridable while draft)
   - `extra_labour` — money, required, default 0
   - `observations` — text, optional
@@ -309,7 +310,8 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
   - Only `draft` is editable. Explicit **issue** snapshots totals, client/site display fields, and locks. PDF is for issued documents. Draft preview PDF (if added later) must not lock.
   - Upfront discount applies to **equipment line totals only**, not tubing, not extra labour.
   - `extra_labour` is on the header, not on lines.
-  - `cancelled` retires a locked proforma. Do not unlock. Soft-delete still hides mistakes from live lists.
+  - `cancelled` retires a locked proforma. Do not unlock. Cancelling clears `accepted_at`. Soft-delete still hides mistakes from live lists.
+  - `accepted_at` is separate from `status`: an issued proforma may stay `issued` with or without a mark; later reporting can use `accepted_at IS NOT NULL` and group by that timestamp.
   - Totals at issue:
     - `equipment_subtotal` = sum over lines of `quantity × unit_price`
     - `tubing_total` = sum over lines of `quantity × tubing_amount`

@@ -702,10 +702,45 @@ def cancel_proforma(proforma, user):
     if proforma.status != Proforma.Status.ISSUED:
         raise ValidationError("Only issued proformas can be cancelled.")
     proforma.status = Proforma.Status.CANCELLED
+    proforma.accepted_at = None
     proforma.updated_by = user
-    proforma.save(update_fields=["status", "updated_at", "updated_by"])
+    proforma.save(update_fields=["status", "accepted_at", "updated_at", "updated_by"])
     log_activity(
         action="cancel_proforma",
+        object_type="proforma",
+        object_id=proforma.pk,
+        actor=user,
+    )
+    return proforma
+
+
+def accept_proforma(proforma, user):
+    if proforma.status != Proforma.Status.ISSUED:
+        raise ValidationError("Only issued proformas can be marked accepted.")
+    if proforma.accepted_at is not None:
+        raise ValidationError("Proforma is already marked accepted.")
+    proforma.accepted_at = timezone.now()
+    proforma.updated_by = user
+    proforma.save(update_fields=["accepted_at", "updated_at", "updated_by"])
+    log_activity(
+        action="accept_proforma",
+        object_type="proforma",
+        object_id=proforma.pk,
+        actor=user,
+    )
+    return proforma
+
+
+def unaccept_proforma(proforma, user):
+    if proforma.status != Proforma.Status.ISSUED:
+        raise ValidationError("Only issued proformas can be unmarked.")
+    if proforma.accepted_at is None:
+        raise ValidationError("Proforma is not marked accepted.")
+    proforma.accepted_at = None
+    proforma.updated_by = user
+    proforma.save(update_fields=["accepted_at", "updated_at", "updated_by"])
+    log_activity(
+        action="unaccept_proforma",
         object_type="proforma",
         object_id=proforma.pk,
         actor=user,

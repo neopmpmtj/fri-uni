@@ -15,7 +15,7 @@ from proformas.models import (
     TubingLength,
     VatRate,
 )
-from proformas.services import add_line, cancel_proforma, create_draft, issue_proforma
+from proformas.services import add_line, accept_proforma, cancel_proforma, create_draft, issue_proforma
 
 
 SIMPLE_BRANDS = ("Mitsubishi", "LG", "Nippon")
@@ -451,15 +451,24 @@ def _add_lines(proforma, actor, lines):
         )
 
 
-def _ensure_proforma(site, actor, *, status, lines, **draft_kwargs):
+def _ensure_proforma(site, actor, *, status, lines, accepted=False, **draft_kwargs):
     if site.proformas.exists():
-        return site.proformas.order_by("pk").first()
+        proforma = site.proformas.order_by("pk").first()
+        if (
+            accepted
+            and proforma.status == Proforma.Status.ISSUED
+            and proforma.accepted_at is None
+        ):
+            accept_proforma(proforma, actor)
+        return proforma
     proforma = create_draft(site, actor, **draft_kwargs)
     _add_lines(proforma, actor, lines)
     if status in (Proforma.Status.ISSUED, Proforma.Status.CANCELLED):
         issue_proforma(proforma, actor)
     if status == Proforma.Status.CANCELLED:
         cancel_proforma(proforma, actor)
+    if accepted and proforma.status == Proforma.Status.ISSUED:
+        accept_proforma(proforma, actor)
     return proforma
 
 
@@ -520,6 +529,7 @@ def seed_demo(*, password=DEMO_PASSWORD, reset_password=False):
         sites["Apartamento Alfama"],
         manager,
         status=Proforma.Status.ISSUED,
+        accepted=True,
         discount_percent="5",
         extra_labour="80.00",
         observations="Alfama refurbishment. Agreed 5% discount.",

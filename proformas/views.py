@@ -253,6 +253,9 @@ def proforma_detail(request, pk):
         if action == "cancel_proforma" and proforma.status != Proforma.Status.ISSUED:
             messages.error(request, "Only issued proformas can be cancelled.")
             return redirect("proforma_detail", pk=proforma.pk)
+        if action in {"accept_proforma", "unaccept_proforma"} and proforma.status != Proforma.Status.ISSUED:
+            messages.error(request, "Only issued proformas can be marked accepted.")
+            return redirect("proforma_detail", pk=proforma.pk)
         try:
             if action == "save_header" and is_draft:
                 header_form = ProformaHeaderForm(request.POST)
@@ -321,6 +324,12 @@ def proforma_detail(request, pk):
             elif action == "cancel_proforma" and proforma.status == Proforma.Status.ISSUED:
                 services.cancel_proforma(proforma, request.user)
                 return redirect("proforma_detail", pk=proforma.pk)
+            elif action == "accept_proforma" and proforma.status == Proforma.Status.ISSUED:
+                services.accept_proforma(proforma, request.user)
+                return redirect("proforma_detail", pk=proforma.pk)
+            elif action == "unaccept_proforma" and proforma.status == Proforma.Status.ISSUED:
+                services.unaccept_proforma(proforma, request.user)
+                return redirect("proforma_detail", pk=proforma.pk)
         except ValidationError as exc:
             messages.error(request, _validation_message(exc))
             return redirect("proforma_detail", pk=proforma.pk)
@@ -354,6 +363,7 @@ def proforma_detail(request, pk):
             "is_draft": is_draft,
             "is_issued": proforma.status == Proforma.Status.ISSUED,
             "is_cancelled": proforma.status == Proforma.Status.CANCELLED,
+            "is_accepted": proforma.accepted_at is not None,
             "nav_active": "proformas",
             "page_title": proforma.number,
         },

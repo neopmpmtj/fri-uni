@@ -87,6 +87,40 @@ a {
     border-color: #f0c4c4;
 }
 
+.status-pill {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.4;
+    vertical-align: middle;
+}
+
+.status-pill + .status-pill {
+    margin-left: 0.35rem;
+}
+
+.status-pill--draft {
+    background: #e8edf2;
+    color: #4a5568;
+}
+
+.status-pill--issued {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-pill--cancelled {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-pill--accepted {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
 .icon-btn {
     padding: 0.4rem;
 }

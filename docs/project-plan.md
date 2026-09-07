@@ -377,6 +377,10 @@ Do not implement in these phases:
 - Dark/light theme (warehouse has it; skip unless asked)
 - Django gettext `.po` / `LocaleMiddleware` UI translation
 
+## Backlog (post-MVP slices)
+
+- [x] Proforma `accepted_at`: mark issued quotes as accepted; cancel clears mark; list/detail UI (completed 2026-09-07)
+
 ## Tests policy
 
 | Phase | What to prove |
