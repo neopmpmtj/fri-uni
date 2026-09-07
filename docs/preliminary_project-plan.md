@@ -322,3 +322,26 @@ None.
 ### Open questions still open
 
 None.
+
+## Update 2026-09-07 — client billing identity and HQ site
+
+### What changed
+
+- **Clients:** `kind` (`person` | `company`), required unique NIF (`tax_number`), billing address (`street`, `postal_code` `NNNN-NNN`, `city`, `country_code` default `PT`). Still optional `phone` / `email`.
+- **Sites:** `is_headquarters` flag; `street`, `postal_code`, `city` required (GPS-ready install address). At most one live HQ per client.
+- **Create client:** auto-creates HQ site (`alias_1` = client name, billing address copied once; later edits independent).
+- **Delete:** admin soft-deletes client only when no live site has proformas (sites deleted with client). HQ site cannot be deleted alone.
+- **Issue snapshot:** proforma stores client billing fields (kind, NIF, address, country) in addition to name/phone/email.
+
+### Apps added/removed
+
+None.
+
+### Decisions
+
+- Billing on client; install/GPS on site. No `alias_0`; HQ is a boolean flag.
+- Maps/nav UI deferred to next sites slice; address validation is in place now.
+
+### Open questions still open
+
+None.

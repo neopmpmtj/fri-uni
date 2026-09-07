@@ -6,6 +6,9 @@
     <section>
         <h2>{{ labels.client }}</h2>
         <p>{{ proforma.client_name }}</p>
+        {% if proforma.client_tax_number %}<p>{{ labels.taxNumber }}: {{ proforma.client_tax_number }}</p>{% endif %}
+        {% if proforma.client_street %}<p>{{ proforma.client_street }}</p>{% endif %}
+        {% if proforma.client_postal_code or proforma.client_city %}<p>{{ proforma.client_postal_code }} {{ proforma.client_city }}</p>{% endif %}
         {% if proforma.client_phone %}<p>{{ labels.phone }}: {{ proforma.client_phone }}</p>{% endif %}
         {% if proforma.client_email %}<p>{{ labels.email }}: {{ proforma.client_email }}</p>{% endif %}
     </section>

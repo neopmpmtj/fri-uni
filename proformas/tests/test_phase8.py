@@ -6,8 +6,10 @@ from django.core.management.base import CommandError
 
 from proformas.models import ActivityLog, Proforma
 
+pytestmark = [pytest.mark.integration, pytest.mark.django_db]
 
-def test_cli_creates_draft_with_created_by(db, staff_user, site, indoor):
+
+def test_cli_creates_draft_with_created_by(staff_user, site, indoor):
     out = StringIO()
     call_command(
         "create_proforma",
@@ -28,7 +30,7 @@ def test_cli_creates_draft_with_created_by(db, staff_user, site, indoor):
     ).exists()
 
 
-def test_cli_issue_freezes(db, staff_user, site, indoor):
+def test_cli_issue_freezes(staff_user, site, indoor):
     out = StringIO()
     call_command(
         "create_proforma",
@@ -47,7 +49,7 @@ def test_cli_issue_freezes(db, staff_user, site, indoor):
     assert proforma.client_name == "Acme"
 
 
-def test_cli_unknown_user_or_site_fails(db, staff_user, site, indoor):
+def test_cli_unknown_user_or_site_fails(staff_user, site, indoor):
     with pytest.raises(CommandError):
         call_command(
             "create_proforma",
@@ -70,7 +72,7 @@ def test_cli_unknown_user_or_site_fails(db, staff_user, site, indoor):
         )
 
 
-def test_cli_unknown_model_does_not_leave_draft(db, staff_user, site, indoor):
+def test_cli_unknown_model_does_not_leave_draft(staff_user, site, indoor):
     with pytest.raises(CommandError):
         call_command(
             "create_proforma",
@@ -86,7 +88,7 @@ def test_cli_unknown_model_does_not_leave_draft(db, staff_user, site, indoor):
     assert Proforma.objects.count() == 0
 
 
-def test_cli_bad_line_spec(db, staff_user, site, indoor):
+def test_cli_bad_line_spec(staff_user, site, indoor):
     with pytest.raises(CommandError):
         call_command(
             "create_proforma",
@@ -99,7 +101,7 @@ def test_cli_bad_line_spec(db, staff_user, site, indoor):
         )
 
 
-def test_cli_inactive_user_fails(db, staff_user, site, indoor):
+def test_cli_inactive_user_fails(staff_user, site, indoor):
     staff_user.is_active = False
     staff_user.save(update_fields=["is_active"])
     with pytest.raises(CommandError, match="Inactive user"):

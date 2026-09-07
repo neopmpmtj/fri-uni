@@ -6,8 +6,9 @@ from accounts.models import User
 from proformas.models import Client, Proforma, Site
 from proformas.seed import DEMO_ADMIN_EMAIL, DEMO_MANAGER_EMAIL, DEMO_PASSWORD
 
+pytestmark = [pytest.mark.integration, pytest.mark.django_db]
 
-@pytest.mark.django_db
+
 def test_seed_demo_creates_users_clients_and_quotes():
     call_command("seed_demo")
     call_command("seed_demo")
@@ -19,14 +20,13 @@ def test_seed_demo_creates_users_clients_and_quotes():
     assert not manager.can_delete
     assert User.objects.filter(email=DEMO_ADMIN_EMAIL).count() == 1
     assert Client.objects.count() == 3
-    assert Site.objects.count() == 5
+    assert Site.objects.count() == 8
     assert Proforma.objects.filter(status=Proforma.Status.ISSUED).count() == 2
     assert Proforma.objects.filter(status=Proforma.Status.DRAFT).count() == 2
     assert Proforma.objects.filter(status=Proforma.Status.CANCELLED).count() == 1
     assert Proforma.objects.count() == 5
 
 
-@pytest.mark.django_db
 def test_manager_cannot_delete_client(client):
     call_command("seed_demo")
     manager = User.objects.get(email=DEMO_MANAGER_EMAIL)
@@ -42,12 +42,26 @@ def test_manager_cannot_delete_client(client):
     assert b'value="delete"' not in page.content
 
 
-@pytest.mark.django_db
 def test_admin_can_delete_client(client):
     call_command("seed_demo")
     admin = User.objects.get(email=DEMO_ADMIN_EMAIL)
-    org = Client.objects.create(name="Empty Client Ltd")
     client.force_login(admin)
+    response = client.post(
+        reverse("client_list"),
+        {
+            "kind": "company",
+            "name": "Empty Client Ltd",
+            "tax_number": "987654322",
+            "street": "Rua Vazia 1",
+            "postal_code": "1000-099",
+            "city": "Lisboa",
+            "country_code": "PT",
+            "phone": "",
+            "email": "",
+        },
+    )
+    assert response.status_code == 302
+    org = Client.objects.get(name="Empty Client Ltd")
     response = client.post(
         reverse("client_list"), {"id": str(org.pk), "action": "delete"}
     )
@@ -55,7 +69,6 @@ def test_admin_can_delete_client(client):
     assert not Client.objects.filter(pk=org.pk).exists()
 
 
-@pytest.mark.django_db
 def test_admin_cannot_delete_client_with_sites(client):
     call_command("seed_demo")
     admin = User.objects.get(email=DEMO_ADMIN_EMAIL)
@@ -66,10 +79,9 @@ def test_admin_cannot_delete_client_with_sites(client):
     )
     assert response.status_code == 200
     assert Client.objects.filter(pk=org.pk).exists()
-    assert b"still has sites" in response.content
+    assert b"sites with proformas" in response.content
 
 
-@pytest.mark.django_db
 def test_manager_cannot_delete_site(client):
     call_command("seed_demo")
     manager = User.objects.get(email=DEMO_MANAGER_EMAIL)
@@ -85,7 +97,6 @@ def test_manager_cannot_delete_site(client):
     assert b'value="delete"' not in page.content
 
 
-@pytest.mark.django_db
 def test_manager_forbidden_on_admin(client):
     call_command("seed_demo")
     manager = User.objects.get(email=DEMO_MANAGER_EMAIL)
@@ -94,7 +105,6 @@ def test_manager_forbidden_on_admin(client):
     assert response.status_code == 403
 
 
-@pytest.mark.django_db
 def test_demo_users_can_log_in(client):
     call_command("seed_demo")
     assert client.login(email=DEMO_MANAGER_EMAIL, password=DEMO_PASSWORD)

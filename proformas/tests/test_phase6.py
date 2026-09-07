@@ -6,15 +6,17 @@ from django.core.exceptions import ValidationError
 from proformas.models import ActivityLog, Proforma
 from proformas.services import (
     add_line,
+    cancel_proforma,
     create_draft,
     issue_proforma,
     update_draft,
-    cancel_proforma,
 )
+
+pytestmark = [pytest.mark.unit, pytest.mark.django_db]
 
 
 @pytest.fixture
-def issued(db, staff_user, site, indoor):
+def issued(staff_user, site, indoor):
     proforma = create_draft(site, staff_user, discount_percent=10)
     add_line(proforma, indoor, staff_user, quantity=1)
     return issue_proforma(proforma, staff_user)

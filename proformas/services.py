@@ -9,11 +9,13 @@ from .models import (
     ActivityLog,
     ActorType,
     ChangeLog,
+    Client,
     Item,
     Parameter,
     Power,
     Proforma,
     ProformaLine,
+    Site,
     SubFamily,
     TubingLength,
     VatRate,
@@ -72,6 +74,31 @@ KNOWN_PARAMETER_KEYS = (
     "default_upfront_discount_percent",
     "tubing_length_unit",
 )
+
+_VALID_NIF_FIRST_DIGITS = set("1235689")
+
+
+def normalize_postal_code(value):
+    raw = (value or "").strip()
+    digits = re.sub(r"\D", "", raw)
+    if len(digits) != 7:
+        raise ValidationError("Postal code must be 7 digits (NNNN-NNN).")
+    return f"{digits[:4]}-{digits[4:]}"
+
+
+def validate_tax_number(value):
+    digits = re.sub(r"\D", "", value or "")
+    if len(digits) != 9:
+        raise ValidationError("NIF must be 9 digits.")
+    if digits[0] not in _VALID_NIF_FIRST_DIGITS:
+        raise ValidationError("Invalid NIF.")
+    total = sum(int(digits[i]) * (9 - i) for i in range(8))
+    check = 11 - (total % 11)
+    if check >= 10:
+        check = 0
+    if check != int(digits[8]):
+        raise ValidationError("Invalid NIF check digit.")
+    return digits
 
 
 def get_parameter(key, default=None):
@@ -332,15 +359,45 @@ def require_delete_permission(user):
         raise PermissionDenied("Only admin can delete.")
 
 
+@transaction.atomic
+def save_client(client, user):
+    is_new = client.pk is None
+    client.updated_by = user
+    if is_new:
+        client.created_by = user
+    client.save()
+    if is_new:
+        Site.objects.create(
+            client=client,
+            is_headquarters=True,
+            alias_1=client.name,
+            street=client.street,
+            postal_code=client.postal_code,
+            city=client.city,
+            created_by=user,
+            updated_by=user,
+        )
+    return client
+
+
 def delete_client(client, user):
     require_delete_permission(user)
-    if client.sites.exists():
-        raise ValidationError("Cannot delete a client that still has sites.")
+    for site in client.sites.all():
+        if site.proformas.exists():
+            raise ValidationError(
+                "Cannot delete a client that has sites with proformas."
+            )
+    for site in client.sites.all():
+        site.soft_delete(user)
     client.soft_delete(user)
 
 
 def delete_site(site, user):
     require_delete_permission(user)
+    if site.is_headquarters:
+        raise ValidationError(
+            "Cannot delete the headquarters site. Delete the client instead."
+        )
     if site.proformas.exists():
         raise ValidationError("Cannot delete a site that still has proformas.")
     site.soft_delete(user)
@@ -556,6 +613,12 @@ def issue_proforma(proforma, user):
     site = proforma.site
     client = site.client
     proforma.client_name = client.name
+    proforma.client_kind = client.kind
+    proforma.client_tax_number = client.tax_number
+    proforma.client_street = client.street
+    proforma.client_postal_code = client.postal_code
+    proforma.client_city = client.city
+    proforma.client_country_code = client.country_code
     proforma.client_phone = client.phone or ""
     proforma.client_email = client.email or ""
     proforma.site_alias_1 = site.alias_1

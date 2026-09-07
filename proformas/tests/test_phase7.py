@@ -1,6 +1,9 @@
+import pytest
 from django.urls import reverse
 
 from proformas.services import add_line, create_draft, issue_proforma
+
+pytestmark = [pytest.mark.integration, pytest.mark.django_db]
 
 
 def _issued(staff_user, site, indoor):
@@ -41,6 +44,7 @@ def test_portuguese_quote_label(client, staff_user, site, indoor):
     assert pdf["Content-Type"] == "application/pdf"
     assert len(pdf.content) > 0
     from django.template.loader import render_to_string
+
     from proformas.quote_i18n import quote_labels
 
     html = render_to_string(

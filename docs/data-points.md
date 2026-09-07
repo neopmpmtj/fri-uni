@@ -91,35 +91,42 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 
 ### clients
 
-- Purpose: customer organization (e.g. a construction company)
+- Purpose: customer for invoicing (private person or company)
 - Written by (apps): staff web app
 - Fields (plus always-on):
-  - `name` — text, required
+  - `kind` — enum `person` | `company`, required
+  - `name` — text, required (invoice name)
+  - `tax_number` — text, required (Portuguese NIF, 9 digits, live unique)
+  - `street` — text, required (billing / legal address)
+  - `postal_code` — text, required (`NNNN-NNN`)
+  - `city` — text, required
+  - `country_code` — text, required (default `PT`)
   - `phone` — text, optional
   - `email` — text, optional
-- Relationships: has many `sites`
-- Uniqueness: live `name`
+- Relationships: has many `sites`; on create the app auto-creates one headquarters site (`is_headquarters`, `alias_1` = client name, billing address copied once)
+- Uniqueness: live `name`; live `tax_number`
 - Reason-required fields: none
 - Extra history table: no
 - Extra activity table: no
-- Notes: not a login. No contacts table, no addresses table.
+- Notes: not a login. No contacts table, no separate addresses table. Billing address lives on the client; install/GPS address lives on each site.
 
 ### sites
 
-- Purpose: a work location of a client
+- Purpose: a work / install location of a client (GPS navigation uses site address)
 - Written by (apps): staff web app
 - Fields (plus always-on):
   - `client` — fk → `clients`, required
+  - `is_headquarters` — boolean, required, default false; at most one live HQ per client
   - `alias_1` — text, required
   - `alias_2` — text, optional
   - `alias_3` — text, optional
   - `alias_4` — text, optional
-  - `street` — text, optional
-  - `postal_code` — text, optional
-  - `city` — text, optional
+  - `street` — text, required
+  - `postal_code` — text, required (`NNNN-NNN`)
+  - `city` — text, required
   - `notes` — text, optional
 - Relationships: belongs to one `client`; has many `proformas`
-- Uniqueness: none beyond always-on (aliases are not a joined list; four columns)
+- Uniqueness: at most one live `is_headquarters` per client
 - Reason-required fields: none
 - Extra history table: no
 - Extra activity table: no
@@ -249,6 +256,12 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
   - `grand_total` — money, optional until issue, then required frozen
   - Snapshot fields (filled at issue; read by PDF):
     - `client_name` — text
+    - `client_kind` — enum `person` | `company`
+    - `client_tax_number` — text (NIF)
+    - `client_street` — text
+    - `client_postal_code` — text
+    - `client_city` — text
+    - `client_country_code` — text
     - `client_phone` — text, optional
     - `client_email` — text, optional
     - `site_alias_1` … `site_alias_4` — text

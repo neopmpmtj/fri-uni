@@ -15,10 +15,12 @@ from .models import (
     VatRate,
 )
 from .services import (
+    normalize_postal_code,
     percent_to_rate,
     validate_internal_code,
     validate_item_identity,
     validate_power_uniqueness,
+    validate_tax_number,
     validate_vat_code,
 )
 
@@ -26,7 +28,26 @@ from .services import (
 class ClientForm(forms.ModelForm):
     class Meta:
         model = Client
-        fields = ("name", "phone", "email")
+        fields = (
+            "kind",
+            "name",
+            "tax_number",
+            "street",
+            "postal_code",
+            "city",
+            "country_code",
+            "phone",
+            "email",
+        )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.instance.pk:
+            self.fields["kind"].initial = Client.Kind.PERSON
+            self.fields["country_code"].initial = "PT"
+        self.fields["country_code"].widget = forms.Select(
+            choices=[("PT", "Portugal")]
+        )
 
     def clean_name(self):
         name = self.cleaned_data["name"].strip()
@@ -36,6 +57,24 @@ class ClientForm(forms.ModelForm):
         if qs.exists():
             raise ValidationError("A live client with this name already exists.")
         return name
+
+    def clean_tax_number(self):
+        tax_number = validate_tax_number(self.cleaned_data["tax_number"])
+        qs = Client.objects.filter(tax_number=tax_number)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError("A live client with this NIF already exists.")
+        return tax_number
+
+    def clean_postal_code(self):
+        return normalize_postal_code(self.cleaned_data["postal_code"])
+
+    def clean_street(self):
+        return self.cleaned_data["street"].strip()
+
+    def clean_city(self):
+        return self.cleaned_data["city"].strip()
 
 
 class SiteForm(forms.ModelForm):
@@ -53,6 +92,32 @@ class SiteForm(forms.ModelForm):
             "notes",
         )
         widgets = {"notes": forms.Textarea(attrs={"rows": 3})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk and self.instance.is_headquarters:
+            self.fields["client"].disabled = True
+
+    def clean_client(self):
+        client = self.cleaned_data["client"]
+        if self.instance.pk and self.instance.is_headquarters:
+            if client != self.instance.client:
+                raise ValidationError(
+                    "Cannot reassign the headquarters site to another client."
+                )
+        return client
+
+    def clean_postal_code(self):
+        return normalize_postal_code(self.cleaned_data["postal_code"])
+
+    def clean_street(self):
+        return self.cleaned_data["street"].strip()
+
+    def clean_city(self):
+        return self.cleaned_data["city"].strip()
+
+    def clean_alias_1(self):
+        return self.cleaned_data["alias_1"].strip()
 
 
 class NewDraftForm(forms.Form):

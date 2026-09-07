@@ -3,6 +3,7 @@ from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -112,7 +113,7 @@ def client_list(request):
         instance = get_object_or_404(Client, pk=pk) if pk else None
         form = ClientForm(request.POST, instance=instance)
         if form.is_valid():
-            _save_audited(form, request.user)
+            services.save_client(form.save(commit=False), request.user)
             return redirect("client_list")
         editing = instance
     elif request.GET.get("id"):
@@ -122,7 +123,11 @@ def client_list(request):
     q = request.GET.get("q", "").strip()
     clients = Client.objects.order_by("name")
     if q:
-        clients = clients.filter(name__icontains=q)
+        clients = clients.filter(
+            Q(name__icontains=q)
+            | Q(tax_number__icontains=q)
+            | Q(city__icontains=q)
+        )
 
     drawer_open = bool(editing or form.errors or request.GET.get("new"))
     return render(

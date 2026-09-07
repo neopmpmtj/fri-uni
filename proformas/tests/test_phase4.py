@@ -4,6 +4,8 @@ from django.urls import reverse
 from accounts.models import User
 from proformas.models import Client, Site
 
+pytestmark = [pytest.mark.integration, pytest.mark.django_db]
+
 
 @pytest.fixture
 def staff_user(db):
@@ -12,12 +14,28 @@ def staff_user(db):
     )
 
 
-@pytest.mark.django_db
+def client_post(**overrides):
+    data = {
+        "kind": "person",
+        "name": "Acme",
+        "tax_number": "512345678",
+        "street": "Rua A 1",
+        "postal_code": "1000-001",
+        "city": "Lisboa",
+        "country_code": "PT",
+        "phone": "",
+        "email": "",
+    }
+    data.update(overrides)
+    return data
+
+
 def test_staff_can_create_client_and_site(client, staff_user):
     client.force_login(staff_user)
-    response = client.post(reverse("client_list"), {"name": "Acme", "phone": "", "email": ""})
+    response = client.post(reverse("client_list"), client_post())
     assert response.status_code == 302
     org = Client.objects.get(name="Acme")
+    assert Site.objects.filter(client=org, is_headquarters=True).exists()
     response = client.post(
         reverse("site_list"),
         {
@@ -26,9 +44,9 @@ def test_staff_can_create_client_and_site(client, staff_user):
             "alias_2": "",
             "alias_3": "",
             "alias_4": "",
-            "street": "",
-            "postal_code": "",
-            "city": "",
+            "street": "Rua Obra 2",
+            "postal_code": "1000-002",
+            "city": "Lisboa",
             "notes": "",
         },
     )
@@ -36,11 +54,21 @@ def test_staff_can_create_client_and_site(client, staff_user):
     assert Site.objects.filter(alias_1="House 1", client=org).exists()
 
 
-@pytest.mark.django_db
 def test_duplicate_live_client_name_rejected(client, staff_user):
-    Client.objects.create(name="Acme")
+    Client.objects.create(
+        kind=Client.Kind.PERSON,
+        name="Acme",
+        tax_number="501442600",
+        street="Rua X",
+        postal_code="1000-001",
+        city="Lisboa",
+        country_code="PT",
+    )
     client.force_login(staff_user)
-    response = client.post(reverse("client_list"), {"name": "Acme", "phone": "", "email": ""})
+    response = client.post(
+        reverse("client_list"),
+        client_post(tax_number="987654322"),
+    )
     assert response.status_code == 200
     assert Client.objects.filter(name="Acme").count() == 1
     assert b"already exists" in response.content

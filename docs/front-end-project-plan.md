@@ -149,10 +149,9 @@ Do **not** nest Families / Sub-families as a Master-data cluster on the Items pa
 
 Analog of warehouse **Items**, not of nested Suppliers.
 
-- Toolbar: search (name), **New client**.
-- `.grid`: name, phone, email, actions.
-- Row or Edit opens the drawer: `name` required; `phone`, `email` optional. Soft-delete in the drawer (live lists hide deleted rows).
-- Implementation: Phase 4.
+- Toolbar: search (name, NIF, city), **New client**.
+- `.grid`: name, kind, NIF, city, postal code, actions.
+- Row or Edit opens the drawer: `kind`, `name`, NIF, billing street / postal code / city, country (`PT`), optional phone and email. Soft-delete in the drawer (live lists hide deleted rows). Creating a client auto-creates a headquarters site (address copied once).
 
 ### Sites (list + drawer)
 
@@ -160,8 +159,7 @@ First-class page. **Do not** nest sites inside the client drawer the way warehou
 
 - Toolbar: search, **filter by client**, **New site**.
 - `.grid`: client name, `alias_1` (and maybe city), actions.
-- Drawer fields from data-points: `client` required; `alias_1` required; `alias_2`–`alias_4` optional; `street`, `postal_code`, `city`, `notes` optional.
-- Implementation: Phase 4.
+- Drawer fields from data-points: `client` required; `alias_1` required; `alias_2`–`alias_4` optional; `street`, `postal_code` (`NNNN-NNN`), `city` required; `notes` optional. HQ site cannot be deleted alone.
 
 ### Proforma list
 

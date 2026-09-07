@@ -104,7 +104,13 @@ DEMO_PASSWORD = "fribila-demo"
 
 DEMO_CLIENTS = (
     {
+        "kind": "company",
         "name": "Construtora Atlantico, Lda.",
+        "tax_number": "501442600",
+        "street": "Avenida da Liberdade 100",
+        "postal_code": "1250-140",
+        "city": "Lisboa",
+        "country_code": "PT",
         "phone": "+351 21 000 1100",
         "email": "obras@atlantico.example",
         "sites": (
@@ -127,7 +133,13 @@ DEMO_CLIENTS = (
         ),
     },
     {
+        "kind": "company",
         "name": "Residencias do Tejo, Lda.",
+        "tax_number": "502757191",
+        "street": "Rua do Ouro 50",
+        "postal_code": "1100-060",
+        "city": "Lisboa",
+        "country_code": "PT",
         "phone": "+351 21 000 2200",
         "email": "obras@tejo.example",
         "sites": (
@@ -141,7 +153,13 @@ DEMO_CLIENTS = (
         ),
     },
     {
+        "kind": "company",
         "name": "Hotel Brisa Azul",
+        "tax_number": "506848558",
+        "street": "Praca da Liberdade 50",
+        "postal_code": "4000-322",
+        "city": "Porto",
+        "country_code": "PT",
         "phone": "+351 22 000 3300",
         "email": "manutencao@brisaazul.example",
         "sites": (
@@ -339,25 +357,43 @@ def _tubing(length):
 def _seed_clients_and_sites(actor):
     sites_by_alias = {}
     for spec in DEMO_CLIENTS:
-        client, _ = _live_get_or_create(
+        client_defaults = {
+            "kind": spec.get("kind", Client.Kind.COMPANY),
+            "tax_number": spec["tax_number"],
+            "street": spec["street"],
+            "postal_code": spec["postal_code"],
+            "city": spec["city"],
+            "country_code": spec.get("country_code", "PT"),
+            "phone": spec.get("phone", ""),
+            "email": spec.get("email", ""),
+            "created_by": actor,
+            "updated_by": actor,
+        }
+        client, created = _live_get_or_create(
             Client,
-            defaults={
-                "phone": spec["phone"],
-                "email": spec["email"],
-                "created_by": actor,
-                "updated_by": actor,
-            },
+            defaults=client_defaults,
             name=spec["name"],
         )
+        if created:
+            Site.objects.create(
+                client=client,
+                is_headquarters=True,
+                alias_1=client.name,
+                street=client.street,
+                postal_code=client.postal_code,
+                city=client.city,
+                created_by=actor,
+                updated_by=actor,
+            )
         for site_spec in spec["sites"]:
             lookup = {"client": client, "alias_1": site_spec["alias_1"]}
             defaults = {
                 "alias_2": site_spec.get("alias_2", ""),
                 "alias_3": site_spec.get("alias_3", ""),
                 "alias_4": site_spec.get("alias_4", ""),
-                "street": site_spec.get("street", ""),
-                "postal_code": site_spec.get("postal_code", ""),
-                "city": site_spec.get("city", ""),
+                "street": site_spec["street"],
+                "postal_code": site_spec["postal_code"],
+                "city": site_spec["city"],
                 "notes": site_spec.get("notes", ""),
                 "created_by": actor,
                 "updated_by": actor,

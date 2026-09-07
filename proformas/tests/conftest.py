@@ -26,8 +26,22 @@ def staff_user(db):
 
 @pytest.fixture
 def site(db):
-    org = Client.objects.create(name="Acme")
-    return Site.objects.create(client=org, alias_1="House 1")
+    org = Client.objects.create(
+        kind=Client.Kind.PERSON,
+        name="Acme",
+        tax_number="512345678",
+        street="Rua Sede 1",
+        postal_code="1000-001",
+        city="Lisboa",
+        country_code="PT",
+    )
+    return Site.objects.create(
+        client=org,
+        alias_1="House 1",
+        street="Rua Obra 2",
+        postal_code="1000-002",
+        city="Lisboa",
+    )
 
 
 @pytest.fixture

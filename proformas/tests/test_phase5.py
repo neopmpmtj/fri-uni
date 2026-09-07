@@ -1,17 +1,20 @@
 from decimal import Decimal
 
+import pytest
 from django.utils import timezone
 
 from proformas.services import add_line, create_draft
 
+pytestmark = [pytest.mark.unit, pytest.mark.django_db]
 
-def test_first_draft_number_of_year(db, staff_user, site):
+
+def test_first_draft_number_of_year(staff_user, site):
     year = timezone.now().year
     proforma = create_draft(site, staff_user)
     assert proforma.number == f"PF-{year}-0001"
 
 
-def test_line_tubing_formula(db, staff_user, site, indoor, tubing):
+def test_line_tubing_formula(staff_user, site, indoor, tubing):
     proforma = create_draft(site, staff_user, discount_percent=0)
     line = add_line(
         proforma,
@@ -28,7 +31,7 @@ def test_line_tubing_formula(db, staff_user, site, indoor, tubing):
     assert proforma.equipment_subtotal == Decimal("1000.00")
 
 
-def test_discount_ignores_tubing_and_labour(db, staff_user, site, indoor, tubing):
+def test_discount_ignores_tubing_and_labour(staff_user, site, indoor, tubing):
     proforma = create_draft(
         site, staff_user, discount_percent=10, extra_labour=Decimal("50.00")
     )

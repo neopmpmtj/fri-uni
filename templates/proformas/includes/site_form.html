@@ -27,14 +27,17 @@
     <label>
         <span data-i18n="street">Street</span>
         {{ form.street }}
+        {{ form.street.errors }}
     </label>
     <label>
         <span data-i18n="postalCode">Postal code</span>
         {{ form.postal_code }}
+        {{ form.postal_code.errors }}
     </label>
     <label>
         <span data-i18n="city">City</span>
         {{ form.city }}
+        {{ form.city.errors }}
     </label>
     <label>
         <span data-i18n="notes">Notes</span>

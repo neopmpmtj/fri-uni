@@ -26,17 +26,20 @@ def admin_user(db):
     )
 
 
+@pytest.mark.unit
 @pytest.mark.django_db
 def test_internal_code_is_stored_uppercase():
     assert normalize_internal_code(" dai-sen-i-9 ") == "DAI-SEN-I-9"
 
 
+@pytest.mark.unit
 @pytest.mark.django_db
 def test_internal_code_unique_is_case_insensitive(indoor):
     with pytest.raises(ValidationError):
         validate_internal_code("mit-spl-i-9")
 
 
+@pytest.mark.unit
 @pytest.mark.django_db
 def test_item_identity_unique_rejects_duplicate_combo(indoor):
     with pytest.raises(ValidationError) as exc:
@@ -49,6 +52,7 @@ def test_item_identity_unique_rejects_duplicate_combo(indoor):
     assert "MIT-SPL-I-9" in str(exc.value)
 
 
+@pytest.mark.unit
 @pytest.mark.django_db
 def test_item_identity_unique_allows_same_item_on_edit(indoor):
     validate_item_identity(
@@ -60,6 +64,7 @@ def test_item_identity_unique_allows_same_item_on_edit(indoor):
     )
 
 
+@pytest.mark.integration
 @pytest.mark.django_db
 def test_new_item_rejects_duplicate_identity(client, staff_user, indoor):
     client.force_login(staff_user)
@@ -80,6 +85,7 @@ def test_new_item_rejects_duplicate_identity(client, staff_user, indoor):
     assert "MIT-SPL-I-9" in str(response.context["form"].non_field_errors())
 
 
+@pytest.mark.integration
 @pytest.mark.django_db
 def test_new_item_allows_same_identity_with_different_max_volume(client, staff_user, indoor):
     client.force_login(staff_user)
@@ -102,6 +108,7 @@ def test_new_item_allows_same_identity_with_different_max_volume(client, staff_u
     assert indoor.max_volume_m3 == Decimal("25")
 
 
+@pytest.mark.integration
 @pytest.mark.django_db
 def test_edit_item_rejects_duplicate_identity(client, staff_user, indoor):
     client.force_login(staff_user)
@@ -135,6 +142,7 @@ def test_edit_item_rejects_duplicate_identity(client, staff_user, indoor):
     assert "MIT-SPL-I-12" in str(response.context["form"].non_field_errors())
 
 
+@pytest.mark.integration
 @pytest.mark.django_db
 def test_same_sub_family_different_manufacturer_allowed(client, staff_user, indoor):
     client.force_login(staff_user)
@@ -155,6 +163,7 @@ def test_same_sub_family_different_manufacturer_allowed(client, staff_user, indo
     assert Item.objects.filter(internal_code="LG-SPL-I-9").exists()
 
 
+@pytest.mark.integration
 @pytest.mark.django_db
 def test_item_list_sorts_by_manufacturer_desc(client, staff_user, indoor):
     client.force_login(staff_user)
@@ -177,6 +186,7 @@ def test_item_list_sorts_by_manufacturer_desc(client, staff_user, indoor):
     assert codes.index("MIT-SPL-I-9") < codes.index("LG-SPL-I-9")
 
 
+@pytest.mark.unit
 @pytest.mark.django_db
 def test_list_price_without_reason_fails(indoor, admin_user):
     with pytest.raises(ValidationError):
@@ -185,6 +195,7 @@ def test_list_price_without_reason_fails(indoor, admin_user):
         )
 
 
+@pytest.mark.unit
 @pytest.mark.django_db
 def test_list_price_with_reason_writes_change_log(indoor, admin_user):
     update_equipment_list_price(
@@ -198,6 +209,7 @@ def test_list_price_with_reason_writes_change_log(indoor, admin_user):
     assert indoor.list_price == Decimal("510.00")
 
 
+@pytest.mark.integration
 @pytest.mark.django_db
 def test_seed_catalog_twice_does_not_duplicate():
     call_command("seed_catalog")
@@ -244,6 +256,7 @@ def test_seed_catalog_twice_does_not_duplicate():
     assert Power.objects.filter(unit="BTU").count() == 3
 
 
+@pytest.mark.integration
 @pytest.mark.django_db
 def test_sub_family_is_shared_across_brands():
     call_command("seed_catalog")
@@ -256,6 +269,7 @@ def test_sub_family_is_shared_across_brands():
     ).exists()
 
 
+@pytest.mark.integration
 @pytest.mark.django_db
 def test_staff_can_open_catalog_pages(client, staff_user):
     client.force_login(staff_user)
@@ -281,11 +295,12 @@ def test_staff_can_open_catalog_pages(client, staff_user):
     assert b"catalogAdmin" not in dashboard.content
 
 
-@pytest.mark.django_db
+@pytest.mark.unit
 def test_percent_to_rate_stores_fraction():
     assert percent_to_rate("23") == Decimal("0.2300")
 
 
+@pytest.mark.integration
 @pytest.mark.django_db
 def test_new_item_form_preselects_default_vat(client, staff_user, indoor):
     client.force_login(staff_user)
@@ -294,6 +309,7 @@ def test_new_item_form_preselects_default_vat(client, staff_user, indoor):
     assert response.context["form"].fields["vat_rate"].initial == indoor.vat_rate_id
 
 
+@pytest.mark.integration
 @pytest.mark.django_db
 def test_new_item_sub_family_options_include_manufacturer_data(client, staff_user):
     call_command("seed_catalog")
@@ -309,6 +325,7 @@ def test_new_item_sub_family_options_include_manufacturer_data(client, staff_use
     assert "data-brand=" not in split_tag
 
 
+@pytest.mark.integration
 @pytest.mark.django_db
 def test_item_post_without_power_is_invalid(client, staff_user, indoor):
     client.force_login(staff_user)
@@ -328,6 +345,7 @@ def test_item_post_without_power_is_invalid(client, staff_user, indoor):
     assert response.context["form"].errors.get("power")
 
 
+@pytest.mark.integration
 @pytest.mark.django_db
 def test_item_post_without_vat_rate_is_invalid(client, staff_user, indoor):
     client.force_login(staff_user)
@@ -347,6 +365,7 @@ def test_item_post_without_vat_rate_is_invalid(client, staff_user, indoor):
     assert response.context["form"].errors.get("vat_rate")
 
 
+@pytest.mark.integration
 @pytest.mark.django_db
 def test_new_item_inherits_sub_family_manufacturer(client, staff_user):
     call_command("seed_catalog")
@@ -376,6 +395,7 @@ def test_new_item_inherits_sub_family_manufacturer(client, staff_user):
     assert item.brand_id == daikin.pk
 
 
+@pytest.mark.integration
 @pytest.mark.django_db
 def test_new_item_split_without_manufacturer_is_invalid(client, staff_user):
     call_command("seed_catalog")
@@ -399,6 +419,7 @@ def test_new_item_split_without_manufacturer_is_invalid(client, staff_user):
     assert response.context["form"].errors.get("brand")
 
 
+@pytest.mark.integration
 @pytest.mark.django_db
 def test_staff_can_save_sub_family_with_and_without_manufacturer(
     client, staff_user, indoor
@@ -431,6 +452,7 @@ def test_staff_can_save_sub_family_with_and_without_manufacturer(
     assert row.brand_id == brand.pk
 
 
+@pytest.mark.integration
 @pytest.mark.django_db
 def test_staff_cannot_delete_vat_rate(client, staff_user, indoor):
     client.force_login(staff_user)
@@ -442,6 +464,7 @@ def test_staff_cannot_delete_vat_rate(client, staff_user, indoor):
     assert VatRate.objects.filter(pk=indoor.vat_rate_id).exists()
 
 
+@pytest.mark.integration
 @pytest.mark.django_db
 def test_tubing_price_change_without_reason_fails(client, staff_user, tubing):
     client.force_login(staff_user)

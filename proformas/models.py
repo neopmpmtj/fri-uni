@@ -74,7 +74,17 @@ class Parameter(AuditedModel):
 
 
 class Client(AuditedModel):
+    class Kind(models.TextChoices):
+        PERSON = "person", "Person"
+        COMPANY = "company", "Company"
+
+    kind = models.CharField(max_length=16, choices=Kind.choices)
     name = models.CharField(max_length=255)
+    tax_number = models.CharField(max_length=9)
+    street = models.CharField(max_length=255)
+    postal_code = models.CharField(max_length=8)
+    city = models.CharField(max_length=128)
+    country_code = models.CharField(max_length=2, default="PT")
     phone = models.CharField(max_length=64, blank=True)
     email = models.EmailField(blank=True)
 
@@ -84,7 +94,12 @@ class Client(AuditedModel):
                 fields=["name"],
                 condition=Q(deleted_at__isnull=True),
                 name="uniq_live_client_name",
-            )
+            ),
+            UniqueConstraint(
+                fields=["tax_number"],
+                condition=Q(deleted_at__isnull=True),
+                name="uniq_live_client_tax_number",
+            ),
         ]
 
     def __str__(self):
@@ -93,14 +108,24 @@ class Client(AuditedModel):
 
 class Site(AuditedModel):
     client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name="sites")
+    is_headquarters = models.BooleanField(default=False)
     alias_1 = models.CharField(max_length=255)
     alias_2 = models.CharField(max_length=255, blank=True)
     alias_3 = models.CharField(max_length=255, blank=True)
     alias_4 = models.CharField(max_length=255, blank=True)
-    street = models.CharField(max_length=255, blank=True)
-    postal_code = models.CharField(max_length=32, blank=True)
-    city = models.CharField(max_length=128, blank=True)
+    street = models.CharField(max_length=255)
+    postal_code = models.CharField(max_length=8)
+    city = models.CharField(max_length=128)
     notes = models.TextField(blank=True)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=["client"],
+                condition=Q(deleted_at__isnull=True, is_headquarters=True),
+                name="uniq_live_site_hq_per_client",
+            )
+        ]
 
     def __str__(self):
         return self.alias_1
@@ -346,6 +371,12 @@ class Proforma(AuditedModel):
         max_digits=12, decimal_places=2, null=True, blank=True
     )
     client_name = models.CharField(max_length=255, blank=True)
+    client_kind = models.CharField(max_length=16, blank=True)
+    client_tax_number = models.CharField(max_length=9, blank=True)
+    client_street = models.CharField(max_length=255, blank=True)
+    client_postal_code = models.CharField(max_length=8, blank=True)
+    client_city = models.CharField(max_length=128, blank=True)
+    client_country_code = models.CharField(max_length=2, blank=True)
     client_phone = models.CharField(max_length=64, blank=True)
     client_email = models.CharField(max_length=254, blank=True)
     site_alias_1 = models.CharField(max_length=255, blank=True)
