@@ -441,6 +441,9 @@ class Proforma(AuditedModel):
     tubing_total = models.DecimalField(
         max_digits=12, decimal_places=2, null=True, blank=True
     )
+    extra_tubing_metres = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True
+    )
     discount_amount = models.DecimalField(
         max_digits=12, decimal_places=2, null=True, blank=True
     )

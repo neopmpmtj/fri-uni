@@ -70,3 +70,20 @@ def test_quote_includes_extra_site_snapshots(client, staff_user, site, indoor):
     body = client.get(reverse("proforma_quote", args=[proforma.pk])).content.decode()
     assert "Gate C" in body
     assert "Bring ladder" in body
+
+
+def test_quote_shows_stored_extra_tubing_metres(client, staff_user, site, indoor, tubing):
+    proforma = create_draft(site, staff_user, discount_percent=0)
+    add_line(
+        proforma,
+        indoor,
+        staff_user,
+        quantity=2,
+        extra_tubing=True,
+        tubing_length=tubing,
+    )
+    issued = issue_proforma(proforma, staff_user)
+    client.force_login(staff_user)
+    body = client.get(reverse("proforma_quote", args=[issued.pk])).content.decode()
+    assert "10.00 m" in body
+

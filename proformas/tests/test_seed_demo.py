@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 from django.core.management import call_command
 from django.urls import reverse
@@ -37,6 +39,14 @@ def test_seed_demo_creates_users_clients_and_quotes():
         == 1
     )
     assert Proforma.objects.count() == 7
+    cascais = Proforma.objects.filter(
+        site__alias_1="Moradia Cascais", status=Proforma.Status.ISSUED
+    ).first()
+    assert cascais is not None
+    assert cascais.extra_tubing_metres == Decimal("8.00")
+    revision = Proforma.objects.filter(replaces=cascais).first()
+    assert revision is not None
+    assert revision.extra_tubing_metres == Decimal("8.00")
 
 
 def test_manager_cannot_delete_client(client):

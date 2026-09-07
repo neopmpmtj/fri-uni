@@ -205,6 +205,14 @@ label {
     font-size: 0.9rem;
 }
 
+.tubing-length-field {
+    display: none;
+}
+
+#line-form:has(#id_extra_tubing:checked) .tubing-length-field {
+    display: flex;
+}
+
 input,
 select,
 textarea {

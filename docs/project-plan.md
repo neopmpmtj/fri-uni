@@ -384,6 +384,7 @@ Do not implement in these phases:
 - [x] Drop `cancelled` status; `rejected_at` overlay on issued (sibling to `accepted_at`); Change blocked when rejected (completed 2026-09-07)
 - [x] Crash/freeze review + H/M/L remediations from [`error-dead-ends-2026-09-07-1238.md`](reviews/error-dead-ends-2026-09-07-1238.md) (completed 2026-09-07)
 - [x] Proforma list Accept / Reject / Clear so staff need not Change an issued quote to mark outcome (completed 2026-09-07)
+- [x] Line drawer: hide tubing length until extra tubing; default shortest length; store `extra_tubing_metres` on the proforma (completed 2026-09-07)
 
 ## Tests policy
 

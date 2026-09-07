@@ -402,3 +402,24 @@ None.
 ### Open questions still open
 
 None.
+
+## Update 2026-09-07 — extra tubing metres on the proforma
+
+### What changed
+
+- Line drawer: tubing length is hidden until Extra tubing is checked; then the shortest catalog length is selected (no blank dashes).
+- New header field `extra_tubing_metres` = sum of `quantity × length` on extra-tubing lines. Frozen at issue. Shown on the work page and issued quote/PDF next to money Tubing when non-zero.
+- Demo Cascais quote has two extra-tubing runs (5 m + 3 m → 8 m).
+
+### Apps added/removed
+
+None.
+
+### Decisions
+
+- Metres are stored on the proforma header (same write path as money totals), not derived in templates.
+- Do not hardcode 3 m; default is the shortest live `tubing_lengths` row.
+
+### Open questions still open
+
+None.

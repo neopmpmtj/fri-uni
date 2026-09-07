@@ -307,6 +307,11 @@ class ProformaLineForm(forms.ModelForm):
         self.fields["manufacturer"].queryset = Brand.objects.order_by("name")
         self.fields["tubing_length"].queryset = TubingLength.objects.order_by("length")
         self.fields["tubing_length"].required = False
+        lengths = self.fields["tubing_length"].queryset
+        if lengths.exists():
+            self.fields["tubing_length"].empty_label = None
+            if not (self.instance.pk and self.instance.tubing_length_id):
+                self.fields["tubing_length"].initial = lengths.first()
         if self.instance.pk and self.instance.item_id:
             item = self.instance.item
             self.fields["family"].initial = item.sub_family.family_id

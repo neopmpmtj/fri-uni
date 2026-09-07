@@ -93,6 +93,12 @@
         <dt data-i18n="tubingTotal">Tubing</dt>
         <dd>{{ proforma.tubing_total }}</dd>
     </div>
+    {% if proforma.extra_tubing_metres %}
+    <div>
+        <dt data-i18n="extraTubingMetres">Extra tubing</dt>
+        <dd>{{ proforma.extra_tubing_metres }} m</dd>
+    </div>
+    {% endif %}
     <div>
         <dt data-i18n="discountAmount">Discount</dt>
         <dd>{{ proforma.discount_amount }}</dd>

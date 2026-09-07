@@ -519,8 +519,8 @@ def seed_demo(*, password=DEMO_PASSWORD, reset_password=False):
         status=Proforma.Status.ISSUED,
         extra_labour="250.00",
         observations=(
-            "House install: Emura in the main bedroom with extra tubing "
-            "and a 9k unit in the suite."
+            "House install: Emura in the main bedroom with extra tubing, "
+            "and a 9k unit in the suite also with extra tubing."
         ),
         lines=(
             {
@@ -532,7 +532,14 @@ def seed_demo(*, password=DEMO_PASSWORD, reset_password=False):
                 "tubing": "5.00",
             },
             {"brand": "Daikin", "style": "Emura", "kind": outdoor, "btu": 12000},
-            {"brand": "Daikin", "style": "Emura", "kind": indoor, "btu": 9000},
+            {
+                "brand": "Daikin",
+                "style": "Emura",
+                "kind": indoor,
+                "btu": 9000,
+                "extra_tubing": True,
+                "tubing": "3.00",
+            },
             {"brand": "Daikin", "style": "Emura", "kind": outdoor, "btu": 9000},
         ),
     )

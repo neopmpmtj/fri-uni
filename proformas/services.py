@@ -235,21 +235,27 @@ NUMBER_ALLOCATION_ATTEMPTS = 5
 
 def recompute_draft_totals(proforma):
     require_draft(proforma)
-    lines = list(proforma.lines.all())
+    lines = list(proforma.lines.select_related("tubing_length"))
     equipment = sum((line.quantity * line.unit_price for line in lines), Decimal("0.00"))
     tubing = sum((line.quantity * line.tubing_amount for line in lines), Decimal("0.00"))
+    metres = Decimal("0.00")
+    for line in lines:
+        if line.extra_tubing and line.tubing_length_id:
+            metres += Decimal(line.quantity) * line.tubing_length.length
     equipment = money(equipment)
     tubing = money(tubing)
     discount = money(equipment * proforma.upfront_discount_percent / Decimal("100"))
     grand = money(equipment - discount + tubing + proforma.extra_labour)
     proforma.equipment_subtotal = equipment
     proforma.tubing_total = tubing
+    proforma.extra_tubing_metres = metres
     proforma.discount_amount = discount
     proforma.grand_total = grand
     proforma.save(
         update_fields=[
             "equipment_subtotal",
             "tubing_total",
+            "extra_tubing_metres",
             "discount_amount",
             "grand_total",
             "updated_at",

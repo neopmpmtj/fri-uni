@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
-from proformas.models import ActivityLog, ChangeLog, Client, Proforma
+from proformas.models import ActivityLog, ChangeLog, Client, Proforma, TubingLength
 from proformas.services import (
     add_line,
     create_draft,
@@ -188,3 +188,24 @@ def test_update_draft_rejects_negative_labour(staff_user, site):
     proforma = create_draft(site, staff_user)
     with pytest.raises(ValidationError):
         update_draft(proforma, staff_user, extra_labour=Decimal("-1.00"))
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_new_line_drawer_defaults_shortest_tubing_length(
+    client, staff_user, site, indoor, tubing
+):
+    short = TubingLength.objects.create(length=Decimal("3.00"), price=Decimal("25.00"))
+    TubingLength.objects.create(length=Decimal("10.00"), price=Decimal("70.00"))
+    proforma = create_draft(site, staff_user)
+    client.force_login(staff_user)
+    response = client.get(
+        reverse("proforma_detail", args=[proforma.pk]), {"new_line": "1"}
+    )
+    assert response.status_code == 200
+    assert b"tubing-length-field" in response.content
+    field = response.context["line_form"].fields["tubing_length"]
+    assert field.empty_label is None
+    assert field.initial == short
+    html = response.content.decode()
+    assert f'value="{short.pk}" selected' in html

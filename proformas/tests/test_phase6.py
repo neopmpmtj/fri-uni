@@ -25,6 +25,27 @@ def issued(staff_user, site, indoor):
     return issue_proforma(proforma, staff_user)
 
 
+def test_issue_freezes_extra_tubing_metres_after_catalog_change(
+    staff_user, site, indoor, tubing
+):
+    proforma = create_draft(site, staff_user, discount_percent=0)
+    add_line(
+        proforma,
+        indoor,
+        staff_user,
+        quantity=2,
+        extra_tubing=True,
+        tubing_length=tubing,
+    )
+    issued = issue_proforma(proforma, staff_user)
+    assert issued.extra_tubing_metres == Decimal("10.00")
+    tubing.length = Decimal("99.00")
+    tubing.save()
+    issued.refresh_from_db()
+    assert issued.extra_tubing_metres == Decimal("10.00")
+    assert issued.lines.first().tubing_length_value == Decimal("5.00")
+
+
 def test_issue_freezes_line_price_after_catalog_change(issued, indoor):
     frozen_price = issued.lines.first().unit_price
     frozen_total = issued.grand_total

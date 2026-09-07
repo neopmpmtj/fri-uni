@@ -287,6 +287,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
   - `observations` — text, optional
   - `equipment_subtotal` — money, optional until issue, then required frozen
   - `tubing_total` — money, optional until issue, then required frozen
+  - `extra_tubing_metres` — number (metres), optional until issue, then required frozen; sum over extra-tubing lines of `quantity × length`. Not money. `tubing_total` stays the money sum.
   - `discount_amount` — money, optional until issue, then required frozen (equipment only)
   - `grand_total` — money, optional until issue, then required frozen
   - Snapshot fields (filled at issue; read by PDF):
@@ -319,6 +320,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
   - Totals at issue:
     - `equipment_subtotal` = sum over lines of `quantity × unit_price`
     - `tubing_total` = sum over lines of `quantity × tubing_amount`
+    - `extra_tubing_metres` = sum over extra-tubing lines of `quantity × length`
     - `discount_amount` = `equipment_subtotal × upfront_discount_percent / 100`
     - `grand_total` = `equipment_subtotal - discount_amount + tubing_total + extra_labour`
 
