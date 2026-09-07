@@ -380,6 +380,7 @@ Do not implement in these phases:
 ## Backlog (post-MVP slices)
 
 - [x] Proforma `accepted_at`: mark issued quotes as accepted; cancel clears mark; list/detail UI (completed 2026-09-07)
+- [x] Proforma list Edit/Change actions + supersede links (`superseded_by` / `replaces`) (completed 2026-09-07)
 
 ## Tests policy
 

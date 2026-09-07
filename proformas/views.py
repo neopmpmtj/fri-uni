@@ -206,7 +206,9 @@ def proforma_list(request):
 
     q = request.GET.get("q", "").strip()
     status = request.GET.get("status", "").strip()
-    rows = Proforma.objects.select_related("site__client").order_by("-updated_at")
+    rows = Proforma.objects.select_related(
+        "site__client", "superseded_by"
+    ).order_by("-updated_at")
     if q:
         rows = rows.filter(number__icontains=q)
     if status:
@@ -230,9 +232,25 @@ def proforma_list(request):
 
 
 @login_required
+def proforma_change(request):
+    if request.method != "POST":
+        return redirect("proforma_list")
+    proforma = get_object_or_404(Proforma, pk=request.POST.get("id"))
+    try:
+        new = services.change_proforma(proforma, request.user)
+    except ValidationError as exc:
+        messages.error(request, _validation_message(exc))
+        return redirect("proforma_detail", pk=proforma.pk)
+    return redirect("proforma_detail", pk=new.pk)
+
+
+@login_required
 def proforma_detail(request, pk):
     proforma = get_object_or_404(
-        Proforma.objects.select_related("site__client"), pk=pk
+        Proforma.objects.select_related(
+            "site__client", "superseded_by", "replaces"
+        ),
+        pk=pk,
     )
     is_draft = proforma.status == Proforma.Status.DRAFT
     header_form = ProformaHeaderForm(
@@ -364,6 +382,8 @@ def proforma_detail(request, pk):
             "is_issued": proforma.status == Proforma.Status.ISSUED,
             "is_cancelled": proforma.status == Proforma.Status.CANCELLED,
             "is_accepted": proforma.accepted_at is not None,
+            "is_superseded": proforma.is_superseded,
+            "can_change": proforma.can_change,
             "nav_active": "proformas",
             "page_title": proforma.number,
         },

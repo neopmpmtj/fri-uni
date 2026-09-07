@@ -12,7 +12,7 @@ Audit defaults: `change_logs` (field-level), `activity_logs` (actions). Per-enti
 
 `created_by` / `updated_by` may be null for `actor_type = system`. The LLM/CLI path is not anonymous: the command takes a **mandatory user**; that user is `created_by` and `actor_type = user`.
 
-Draft proformas may be edited. **Issued** proformas are frozen: no value updates, including when catalog cost prices change later. Corrections = a new proforma. `cancelled` retires a locked one without unlocking.
+Draft proformas may be edited. **Issued** proformas are frozen in place: no value updates on that row. **Change** creates a new draft copy and links the old issued row via `superseded_by` / `replaces` (see `proformas`). `cancelled` retires a locked one without unlocking.
 
 At **issue**, snapshot client, site, and catalog display fields onto the proforma and lines so issued PDFs do not change if live rows are renamed or repriced. FKs remain for navigation; PDF and locked values read the snapshots.
 
@@ -279,6 +279,8 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
   - `number` — text, required; format `PF-YYYY-NNNN` (`YYYY` = create year, `NNNN` = 4-digit per-year sequence); assigned on create
   - `status` — enum `draft` | `issued` | `cancelled`, required
   - `accepted_at` — datetime, optional; null = not accepted yet. Set only on `issued` rows when staff mark that the quote went through (client accepted and/or install done). Cleared when staff unmark or when the proforma is cancelled. Not a money field; freeze rules unchanged.
+  - `superseded_by` — fk → `proformas`, optional; set on an **issued** row when staff **Change** it — points to the new draft that replaces it. Null = still the active issued version for that revision chain.
+  - `replaces` — fk → `proformas`, optional; set on a **draft** created by **Change** — points back to the source issued row. Null on normal new drafts.
   - `upfront_discount_percent` — number, required (copied from parameters on create; overridable while draft)
   - `extra_labour` — money, required, default 0
   - `observations` — text, optional
@@ -311,7 +313,8 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
   - Upfront discount applies to **equipment line totals only**, not tubing, not extra labour.
   - `extra_labour` is on the header, not on lines.
   - `cancelled` retires a locked proforma. Do not unlock. Cancelling clears `accepted_at`. Soft-delete still hides mistakes from live lists.
-  - `accepted_at` is separate from `status`: an issued proforma may stay `issued` with or without a mark; later reporting can use `accepted_at IS NOT NULL` and group by that timestamp.
+  - `accepted_at` is separate from `status`: an issued proforma may stay `issued` with or without a mark; later reporting can use `accepted_at IS NOT NULL` and group by that timestamp. Exclude superseded issued rows from active stats (`superseded_by` is null).
+  - **Change** (issued, not accepted, not superseded): copy to new draft on same site; set `replaces` on draft and `superseded_by` on source; source stays `issued` with frozen snapshots/PDF.
   - Totals at issue:
     - `equipment_subtotal` = sum over lines of `quantity × unit_price`
     - `tubing_total` = sum over lines of `quantity × tubing_amount`

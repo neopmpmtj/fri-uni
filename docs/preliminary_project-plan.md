@@ -353,3 +353,8 @@ None.
 - Document life stays `draft` → `issued` → `cancelled`; money frozen after issue.
 - **Went through** is `proformas.accepted_at` (datetime, null = not yet). Staff mark an issued quote when the client accepts or the job is done; they can clear the mark. Cancel clears `accepted_at`.
 - No jobs/install table; no stats or graphs in this slice — the column exists so win-rate reporting can be added later.
+
+### Proforma Change (supersede links)
+
+- **Change** on issued (not accepted, not superseded): new draft on same site; `replaces` on draft, `superseded_by` on source; source stays issued with frozen PDF.
+- List **Actions**: Edit (draft), Change (issued eligible), none (cancelled / accepted / superseded).

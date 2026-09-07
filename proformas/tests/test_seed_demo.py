@@ -22,10 +22,12 @@ def test_seed_demo_creates_users_clients_and_quotes():
     assert Client.objects.count() == 3
     assert Site.objects.count() == 8
     assert Proforma.objects.filter(status=Proforma.Status.ISSUED).count() == 2
-    assert Proforma.objects.filter(status=Proforma.Status.DRAFT).count() == 2
+    assert Proforma.objects.filter(status=Proforma.Status.DRAFT).count() == 3
     assert Proforma.objects.filter(status=Proforma.Status.CANCELLED).count() == 1
     assert Proforma.objects.filter(accepted_at__isnull=False).count() == 1
-    assert Proforma.objects.count() == 5
+    assert Proforma.objects.filter(superseded_by__isnull=False).count() == 1
+    assert Proforma.objects.filter(replaces__isnull=False).count() == 1
+    assert Proforma.objects.count() == 6
 
 
 def test_manager_cannot_delete_client(client):

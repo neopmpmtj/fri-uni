@@ -418,6 +418,20 @@ class Proforma(AuditedModel):
         max_length=16, choices=Status.choices, default=Status.DRAFT
     )
     accepted_at = models.DateTimeField(null=True, blank=True)
+    superseded_by = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    replaces = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
     upfront_discount_percent = models.DecimalField(max_digits=5, decimal_places=2)
     extra_labour = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     observations = models.TextField(blank=True)
@@ -462,6 +476,22 @@ class Proforma(AuditedModel):
 
     def __str__(self):
         return self.number
+
+    @property
+    def can_edit(self):
+        return self.status == self.Status.DRAFT
+
+    @property
+    def can_change(self):
+        return (
+            self.status == self.Status.ISSUED
+            and self.accepted_at is None
+            and self.superseded_by_id is None
+        )
+
+    @property
+    def is_superseded(self):
+        return self.superseded_by_id is not None
 
 
 class ProformaLine(AuditedModel):

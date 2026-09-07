@@ -164,19 +164,22 @@ First-class page. **Do not** nest sites inside the client drawer the way warehou
 ### Proforma list
 
 - Toolbar: search/filter by status (`draft` / `issued` / `cancelled`), **New draft** (must pick a site).
-- `.grid`: number, site/client, status, grand total (if present), updated.
-- Row opens the **proforma work page** (not a drawer for the whole quote).
-- Implementation: Phase 5.
+- `.grid`: number (link to work page), site/client, status pills (+ Accepted / Superseded when set), grand total, updated, **Actions**.
+- **Actions:** `draft` → **Edit**; `issued` not accepted not superseded → **Change** (POST); accepted / cancelled / superseded → no action.
+- Implementation: Phase 5 + supersede slice.
 
 ### Proforma work page
 
 Analog of a warehouse **console**, not a Django form wizard.
 
-- Header **on the page** (not in a drawer): upfront discount %, extra labour, observations; live totals; **Issue** / **Cancel** when allowed (Phase 6).
+- Header **on the page** (not in a drawer): upfront discount %, extra labour, observations; live totals; **Issue** / **Cancel** / **Change** when allowed.
 - Lines: `.grid` (item snapshot or live catalog name while draft, qty, tubing, line total).
 - **Add line / Edit line = drawer:** Family → Sub-family → Manufacturer → Item (defaults pre-selected), quantity, extra tubing boolean, tubing length when needed. If the sub-family has a manufacturer, that control is filled and inactive.
-- Draft: editable. Issued: read-only header and lines; buttons **View quote** and **Download PDF** (Phase 7). Cancelled: read-only, no unlock.
-- Implementation: Phases 5–6 (PDF buttons Phase 7).
+- **Draft:** editable; optional “Revision of PF-…” when `replaces` is set.
+- **Issued:** read-only; **Change** (copy to new draft) when not accepted and not superseded; **Mark accepted** / **Cancel** as today; **View quote** / **Download PDF**.
+- **Issued superseded:** read-only; link to replacement draft; no Change.
+- **Cancelled:** read-only; View quote / PDF only; no unlock.
+- Implementation: Phases 5–7 + supersede slice.
 
 ### Issued quote view
 

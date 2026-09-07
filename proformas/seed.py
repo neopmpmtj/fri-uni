@@ -15,7 +15,14 @@ from proformas.models import (
     TubingLength,
     VatRate,
 )
-from proformas.services import add_line, accept_proforma, cancel_proforma, create_draft, issue_proforma
+from proformas.services import (
+    add_line,
+    accept_proforma,
+    cancel_proforma,
+    change_proforma,
+    create_draft,
+    issue_proforma,
+)
 
 
 SIMPLE_BRANDS = ("Mitsubishi", "LG", "Nippon")
@@ -566,4 +573,15 @@ def seed_demo(*, password=DEMO_PASSWORD, reset_password=False):
             {"brand": "Daikin", "style": "Perfera Floor", "kind": outdoor, "btu": 12000},
         ),
     )
+    cascais = (
+        sites["Moradia Cascais"]
+        .proformas.filter(
+            status=Proforma.Status.ISSUED,
+            superseded_by__isnull=True,
+        )
+        .order_by("pk")
+        .first()
+    )
+    if cascais is not None:
+        change_proforma(cascais, manager)
     return {"admin": admin, "manager": manager}

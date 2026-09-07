@@ -1,3 +1,4 @@
+import json
 import re
 from decimal import Decimal, InvalidOperation
 
@@ -717,6 +718,8 @@ def cancel_proforma(proforma, user):
 def accept_proforma(proforma, user):
     if proforma.status != Proforma.Status.ISSUED:
         raise ValidationError("Only issued proformas can be marked accepted.")
+    if proforma.superseded_by_id is not None:
+        raise ValidationError("Superseded proformas cannot be marked accepted.")
     if proforma.accepted_at is not None:
         raise ValidationError("Proforma is already marked accepted.")
     proforma.accepted_at = timezone.now()
@@ -746,3 +749,49 @@ def unaccept_proforma(proforma, user):
         actor=user,
     )
     return proforma
+
+
+def is_active_for_stats(proforma):
+    return proforma.superseded_by_id is None
+
+
+def change_proforma(proforma, user):
+    if not proforma.can_change:
+        if proforma.status != Proforma.Status.ISSUED:
+            raise ValidationError("Only issued proformas can be changed.")
+        if proforma.accepted_at is not None:
+            raise ValidationError("Accepted proformas cannot be changed.")
+        if proforma.superseded_by_id is not None:
+            raise ValidationError("This proforma was already changed.")
+        raise ValidationError("This proforma cannot be changed.")
+    with transaction.atomic():
+        new = create_draft(
+            proforma.site,
+            user,
+            discount_percent=proforma.upfront_discount_percent,
+            extra_labour=proforma.extra_labour,
+            observations=proforma.observations,
+        )
+        new.replaces = proforma
+        new.updated_by = user
+        new.save(update_fields=["replaces", "updated_at", "updated_by"])
+        for line in proforma.lines.select_related("item", "tubing_length"):
+            add_line(
+                new,
+                line.item,
+                user,
+                quantity=line.quantity,
+                extra_tubing=line.extra_tubing,
+                tubing_length=line.tubing_length,
+            )
+        proforma.superseded_by = new
+        proforma.updated_by = user
+        proforma.save(update_fields=["superseded_by", "updated_at", "updated_by"])
+    log_activity(
+        action="change_proforma",
+        object_type="proforma",
+        object_id=proforma.pk,
+        actor=user,
+        details=json.dumps({"new_id": new.pk, "new_number": new.number}),
+    )
+    return new
