@@ -62,8 +62,8 @@ def test_list_post_mark_rejected(client, staff_user, issued):
     listing = client.get(reverse("proforma_list"))
     assert b"Clear rejected" in listing.content
     assert b"Change" not in listing.content
-    assert b"Mark accepted" not in listing.content
-    assert b"Mark rejected" not in listing.content
+    assert b"outcome-icon--accept" not in listing.content
+    assert b"outcome-icon--reject" not in listing.content
 
 
 def test_list_post_clear_rejected(client, staff_user, issued):
@@ -79,7 +79,7 @@ def test_list_post_clear_rejected(client, staff_user, issued):
 
     listing = client.get(reverse("proforma_list"))
     assert b"Change" in listing.content
-    assert b"Mark rejected" in listing.content
+    assert b"outcome-icon--reject" in listing.content
     assert b"Clear rejected" not in listing.content
 
 
@@ -99,5 +99,5 @@ def test_list_shows_rejected_pill_and_no_change(client, staff_user, issued):
     assert b"status-pill--rejected" in listing.content
     assert b'<button type="submit" class="btn-link" data-i18n="change">Change</button>' not in listing.content
     assert b"Clear rejected" in listing.content
-    assert b"Mark accepted" not in listing.content
-    assert b"Mark rejected" not in listing.content
+    assert b"outcome-icon--accept" not in listing.content
+    assert b"outcome-icon--reject" not in listing.content

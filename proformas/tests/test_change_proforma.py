@@ -118,5 +118,5 @@ def test_list_edit_for_draft_and_no_change_when_accepted(
     assert b"Edit" in listing.content
     assert b'<button type="submit" class="btn-link" data-i18n="change">Change</button>' not in listing.content
     assert b"Clear accepted" in listing.content
-    assert b"Mark accepted" not in listing.content
-    assert b"Mark rejected" not in listing.content
+    assert b"outcome-icon--accept" not in listing.content
+    assert b"outcome-icon--reject" not in listing.content

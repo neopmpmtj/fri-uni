@@ -149,6 +149,36 @@ a {
     margin-left: auto;
 }
 
+.outcome-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: var(--radius-control);
+    line-height: 0;
+}
+
+.outcome-icon--accept {
+    color: #047857;
+}
+
+.outcome-icon--accept:hover,
+.outcome-icon--accept:focus-visible {
+    background: #d1fae5;
+}
+
+.outcome-icon--reject {
+    color: #b91c1c;
+}
+
+.outcome-icon--reject:hover,
+.outcome-icon--reject:focus-visible {
+    background: #fee2e2;
+}
+
 .btn-link {
     background: none;
     border: none;

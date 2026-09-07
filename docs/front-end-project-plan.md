@@ -104,7 +104,7 @@ Reference: warehouse `item_console.html` (`#drawer`, `#drawer-backdrop`) and `.d
 ### i18n
 
 - English fallback text in HTML.
-- `data-i18n`, `data-i18n-placeholder`, `data-i18n-aria` (and `data-i18n-col` on sortable headers if used).
+- `data-i18n`, `data-i18n-placeholder`, `data-i18n-aria`, `data-i18n-title` (and `data-i18n-col` on sortable headers if used).
 - Shared `static/js/i18n.js`: `normalizeLang`, `t()`, `applyStaticI18n()`, `safeGet`/`safeSet`. `pt*` → `pt`; dicts may key `"pt-PT"` with a `pt` alias.
 - No `.po` files, no `{% trans %}`, no `User.language`.
 
@@ -165,7 +165,7 @@ First-class page. **Do not** nest sites inside the client drawer the way warehou
 
 - Toolbar: search/filter by status (`draft` / `issued`), **New draft** (must pick a site).
 - `.grid`: number (link to work page), site/client, status pills (+ Accepted / Rejected / Superseded when set), grand total, updated, **Actions**.
-- **Actions:** `draft` → **Edit**. `issued` not accepted not rejected not superseded → **Change** (left) plus **Mark accepted** / **Mark rejected** (right, Yes/No confirm). `issued` + accepted → **Clear accepted** only. `issued` + rejected → **Clear rejected** only. Superseded → no action.
+- **Actions:** `draft` → **Edit**. `issued` not accepted not rejected not superseded → **Change** (left) plus thumbs-up (green) / thumbs-down (red) icons for accept/reject (hover label, Yes/No confirm). `issued` + accepted → **Clear accepted** only. `issued` + rejected → **Clear rejected** only. Superseded → no action.
 - Implementation: Phase 5 + supersede slice.
 
 ### Proforma work page

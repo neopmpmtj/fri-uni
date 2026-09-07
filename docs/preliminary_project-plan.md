@@ -386,7 +386,7 @@ None.
 ### What changed
 
 - Proforma **list** Actions now mark outcomes without opening the issued work page (so staff do not have to **Change**, which supersedes immediately).
-- `issued` (not accepted, not rejected, not superseded): **Change** on the left; **Mark accepted** / **Mark rejected** on the right.
+- `issued` (not accepted, not rejected, not superseded): **Change** on the left; thumbs-up / thumbs-down icons (green/red, hover label) for accept/reject.
 - `issued` + accepted or `issued` + rejected: only **Clear accepted** or **Clear rejected**.
 - Draft stays **Edit**. Superseded stays no action. Detail page actions are unchanged.
 

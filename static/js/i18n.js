@@ -350,6 +350,9 @@ function applyStaticI18n() {
     document.querySelectorAll("[data-i18n-aria]").forEach((node) => {
         node.setAttribute("aria-label", t(node.getAttribute("data-i18n-aria")));
     });
+    document.querySelectorAll("[data-i18n-title]").forEach((node) => {
+        node.setAttribute("title", t(node.getAttribute("data-i18n-title")));
+    });
 }
 
 document.addEventListener("DOMContentLoaded", function () {
