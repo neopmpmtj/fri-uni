@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from accounts.models import User
-from proformas.models import EquipmentModel, Site, TubingLength
+from proformas.models import Item, Site, TubingLength
 from proformas.services import add_line, create_draft, issue_proforma
 
 
@@ -25,7 +25,7 @@ class Command(BaseCommand):
             "--line",
             action="append",
             required=True,
-            help="model_id:qty or model_id:qty:tubing_length_id",
+            help="item_id:qty or item_id:qty:tubing_length_id",
         )
         parser.add_argument("--discount-percent", default=None)
         parser.add_argument("--extra-labour", default=None)
@@ -62,21 +62,21 @@ class Command(BaseCommand):
                     parts = spec.split(":")
                     if len(parts) not in (2, 3):
                         raise CommandError(
-                            "Each --line must be model_id:qty or "
-                            "model_id:qty:tubing_length_id"
+                            "Each --line must be item_id:qty or "
+                            "item_id:qty:tubing_length_id"
                         )
                     try:
-                        model_id = int(parts[0])
+                        item_id = int(parts[0])
                         quantity = int(parts[1])
                     except ValueError as exc:
                         raise CommandError(
-                            "Each --line must be model_id:qty or "
-                            "model_id:qty:tubing_length_id"
+                            "Each --line must be item_id:qty or "
+                            "item_id:qty:tubing_length_id"
                         ) from exc
                     try:
-                        model = EquipmentModel.objects.get(pk=model_id)
-                    except EquipmentModel.DoesNotExist as exc:
-                        raise CommandError(f"Unknown model {parts[0]}") from exc
+                        item = Item.objects.get(pk=item_id)
+                    except Item.DoesNotExist as exc:
+                        raise CommandError(f"Unknown item {parts[0]}") from exc
                     tubing = None
                     extra = False
                     if len(parts) == 3:
@@ -84,8 +84,8 @@ class Command(BaseCommand):
                             tubing_id = int(parts[2])
                         except ValueError as exc:
                             raise CommandError(
-                                "Each --line must be model_id:qty or "
-                                "model_id:qty:tubing_length_id"
+                                "Each --line must be item_id:qty or "
+                                "item_id:qty:tubing_length_id"
                             ) from exc
                         try:
                             tubing = TubingLength.objects.get(pk=tubing_id)
@@ -96,7 +96,7 @@ class Command(BaseCommand):
                         extra = True
                     add_line(
                         proforma,
-                        model,
+                        item,
                         user,
                         quantity=quantity,
                         extra_tubing=extra,

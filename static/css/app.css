@@ -110,6 +110,14 @@ textarea {
     color: var(--text);
 }
 
+input:disabled,
+select:disabled,
+textarea:disabled {
+    background: var(--surface-2);
+    color: var(--muted);
+    cursor: not-allowed;
+}
+
 .form-error {
     color: #9b1c1c;
 }
@@ -187,10 +195,15 @@ textarea {
     margin-bottom: 0.35rem;
 }
 
-.dash-card p {
-    margin: 0;
-    color: var(--muted);
+.dash-section {
+    margin: 1.75rem 0 0.75rem;
     font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--muted);
+}
+
+.dash-section:first-of-type {
+    margin-top: 1.25rem;
 }
 
 /* Work topbar */
@@ -281,6 +294,23 @@ table.grid th {
     font-size: 0.8rem;
     color: var(--muted);
     font-weight: 600;
+}
+
+.th-sort {
+    color: inherit;
+    text-decoration: none;
+}
+
+.th-sort:hover {
+    color: var(--accent);
+}
+
+.th-sort.is-sorted.is-asc::after {
+    content: " \2191";
+}
+
+.th-sort.is-sorted.is-desc::after {
+    content: " \2193";
 }
 
 /* Settings popover */

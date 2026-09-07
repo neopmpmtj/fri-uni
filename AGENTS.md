@@ -84,9 +84,9 @@ Mark complete during session-handoff: `- [x] ... (completed YYYY-MM-DD)`
 
 ## Session
 
-**Done:** Phases 1–8 in `proformas`. Demo seed. pytest 48 passed. Review findings in `docs/reviews/` remediated (admin price/reason, CLI atomicity, snapshots on staff screens, delete-in-use guards, validation).
+**Done:** Phases 1–8 plus catalog slice (family → sub-family → item + manufacturer, VAT on items, setup cards, line cascade). Demo seed with admin/manager. Review remediations on this branch (CLI atomicity, snapshots, delete-in-use, validation).
 
-**Not done:** Production deploy; letterhead; real prices.
+**Not done:** Production deploy; letterhead; real prices; volume auto-pick; indoor/outdoor auto-pair; VAT on quote math/PDF.
 
-**Next:** Letterhead and live prices when supplied. Read [`docs/handoff.md`](docs/handoff.md).
+**Next:** Restart runserver, hard-refresh dashboard Setup (VAT / Parameters / Tubing), then New item should pre-select 23%. Read [`docs/handoff.md`](docs/handoff.md).
 

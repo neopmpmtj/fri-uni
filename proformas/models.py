@@ -1,6 +1,10 @@
+from decimal import Decimal
+
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q, UniqueConstraint
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 
@@ -103,7 +107,10 @@ class Site(AuditedModel):
 
 
 class Brand(AuditedModel):
+    """Manufacturer (data-points table `brands`)."""
+
     name = models.CharField(max_length=128)
+    is_default = models.BooleanField(default=False)
 
     class Meta:
         constraints = [
@@ -111,55 +118,188 @@ class Brand(AuditedModel):
                 fields=["name"],
                 condition=Q(deleted_at__isnull=True),
                 name="uniq_live_brand_name",
-            )
+            ),
+            UniqueConstraint(
+                fields=["is_default"],
+                condition=Q(deleted_at__isnull=True, is_default=True),
+                name="uniq_live_default_brand",
+            ),
         ]
 
     def __str__(self):
         return self.name
 
 
-class Style(AuditedModel):
-    brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name="styles")
+class Family(AuditedModel):
+    """Product category (AC, underfloor, DHW)."""
+
     name = models.CharField(max_length=128)
+    is_default = models.BooleanField(default=False)
 
     class Meta:
+        verbose_name_plural = "families"
         constraints = [
             UniqueConstraint(
-                fields=["brand", "name"],
+                Lower("name"),
                 condition=Q(deleted_at__isnull=True),
-                name="uniq_live_style_name_per_brand",
-            )
+                name="uniq_live_family_name_ci",
+            ),
+            UniqueConstraint(
+                fields=["is_default"],
+                condition=Q(deleted_at__isnull=True, is_default=True),
+                name="uniq_live_default_family",
+            ),
         ]
 
     def __str__(self):
-        return f"{self.brand.name} {self.name}"
+        return self.name
 
 
-class EquipmentModel(AuditedModel):
-    """Catalog machine (data-points table `models`)."""
+class SubFamily(AuditedModel):
+    """Named range under a family (was Style). Optional manufacturer."""
+
+    family = models.ForeignKey(
+        Family, on_delete=models.PROTECT, related_name="sub_families"
+    )
+    brand = models.ForeignKey(
+        Brand,
+        on_delete=models.PROTECT,
+        related_name="owned_sub_families",
+        null=True,
+        blank=True,
+    )
+    name = models.CharField(max_length=128)
+    is_default = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "sub-family"
+        verbose_name_plural = "sub-families"
+        constraints = [
+            UniqueConstraint(
+                Lower("name"),
+                "family",
+                condition=Q(deleted_at__isnull=True),
+                name="uniq_live_subfamily_name_ci_per_family",
+            ),
+            UniqueConstraint(
+                fields=["family"],
+                condition=Q(deleted_at__isnull=True, is_default=True),
+                name="uniq_live_default_subfamily_per_family",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.family.name} / {self.name}"
+
+
+class Power(AuditedModel):
+    """Catalog power rating (data-points table `powers`)."""
+
+    power = models.IntegerField()
+    unit = models.CharField(max_length=32)
+
+    class Meta:
+        ordering = ["power", "unit"]
+        constraints = [
+            UniqueConstraint(
+                "power",
+                Lower("unit"),
+                condition=Q(deleted_at__isnull=True),
+                name="uniq_live_power_unit_ci",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.power} {self.unit}"
+
+
+class VatRate(AuditedModel):
+    """Catalog IVA lookup (data-points table `vat_rates`)."""
+
+    code = models.CharField(max_length=32)
+    label = models.CharField(max_length=64)
+    rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
+    is_default = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["rate"]
+        constraints = [
+            UniqueConstraint(
+                Lower("code"),
+                condition=Q(deleted_at__isnull=True),
+                name="uniq_live_vat_rate_code_ci",
+            ),
+            UniqueConstraint(
+                fields=["is_default"],
+                condition=Q(deleted_at__isnull=True, is_default=True),
+                name="uniq_live_default_vat_rate",
+            ),
+            models.CheckConstraint(
+                condition=Q(rate__gte=0, rate__lte=1),
+                name="vat_rate_gte_zero_lte_one",
+            ),
+        ]
+
+    def __str__(self):
+        return self.label
+
+    def as_percent(self):
+        return (self.rate * 100).quantize(Decimal("0.01"))
+
+
+class Item(AuditedModel):
+    """Catalog machine (data-points table `items`)."""
 
     class Kind(models.TextChoices):
         INDOOR = "indoor", "Indoor"
         OUTDOOR = "outdoor", "Outdoor"
 
-    style = models.ForeignKey(
-        Style, on_delete=models.PROTECT, related_name="equipment_models"
+    sub_family = models.ForeignKey(
+        SubFamily, on_delete=models.PROTECT, related_name="items"
     )
+    brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name="items")
+    vat_rate = models.ForeignKey(
+        VatRate, on_delete=models.PROTECT, related_name="items"
+    )
+    internal_code = models.CharField(max_length=64)
     kind = models.CharField(max_length=16, choices=Kind.choices)
-    btu = models.IntegerField()
-    list_price = models.DecimalField(max_digits=12, decimal_places=2)
+    power = models.ForeignKey(
+        Power, on_delete=models.PROTECT, related_name="items"
+    )
+    max_volume_m3 = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True
+    )
+    list_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    is_default = models.BooleanField(default=False)
 
     class Meta:
         constraints = [
             UniqueConstraint(
-                fields=["style", "kind", "btu"],
+                Lower("internal_code"),
                 condition=Q(deleted_at__isnull=True),
-                name="uniq_live_model_style_kind_btu",
-            )
+                name="uniq_live_item_internal_code_ci",
+            ),
+            UniqueConstraint(
+                fields=["sub_family", "brand"],
+                condition=Q(deleted_at__isnull=True, is_default=True),
+                name="uniq_live_default_item_per_subfamily_brand",
+            ),
+            UniqueConstraint(
+                fields=["sub_family", "brand", "kind", "power"],
+                condition=Q(deleted_at__isnull=True),
+                name="uniq_live_item_identity",
+            ),
         ]
 
     def __str__(self):
-        return f"{self.style} {self.kind} {self.btu}"
+        return (
+            f"{self.internal_code} — {self.sub_family.name} "
+            f"{self.kind} {self.power}"
+        )
 
 
 class TubingLength(AuditedModel):
@@ -232,8 +372,8 @@ class Proforma(AuditedModel):
 
 class ProformaLine(AuditedModel):
     proforma = models.ForeignKey(Proforma, on_delete=models.CASCADE, related_name="lines")
-    model = models.ForeignKey(
-        EquipmentModel, on_delete=models.PROTECT, related_name="proforma_lines"
+    item = models.ForeignKey(
+        Item, on_delete=models.PROTECT, related_name="proforma_lines"
     )
     quantity = models.IntegerField(default=1)
     extra_tubing = models.BooleanField(default=False)
@@ -248,9 +388,12 @@ class ProformaLine(AuditedModel):
     tubing_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     line_total = models.DecimalField(max_digits=12, decimal_places=2)
     brand_name = models.CharField(max_length=128, blank=True)
-    style_name = models.CharField(max_length=128, blank=True)
+    family_name = models.CharField(max_length=128, blank=True)
+    sub_family_name = models.CharField(max_length=128, blank=True)
+    internal_code = models.CharField(max_length=64, blank=True)
     kind = models.CharField(max_length=16, blank=True)
-    btu = models.IntegerField(null=True, blank=True)
+    power_value = models.IntegerField(null=True, blank=True)
+    power_unit = models.CharField(max_length=32, blank=True)
     tubing_length_value = models.DecimalField(
         max_digits=8, decimal_places=2, null=True, blank=True
     )

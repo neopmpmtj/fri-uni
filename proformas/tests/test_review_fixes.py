@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
-from proformas.models import ActivityLog, ChangeLog, Client, EquipmentModel, Proforma
+from proformas.models import ActivityLog, ChangeLog, Client, Proforma
 from proformas.services import (
     add_line,
     create_draft,
@@ -68,7 +68,7 @@ def test_qty_zero_http_form_error(client, staff_user, site, indoor):
         reverse("proforma_detail", args=[proforma.pk]),
         {
             "action": "save_line",
-            "model": str(indoor.pk),
+            "item": str(indoor.pk),
             "quantity": "0",
         },
     )
@@ -135,49 +135,22 @@ def test_wrong_status_issue_shows_message(client, staff_user, site, indoor):
     assert b"Only draft proformas can be edited." in response.content
 
 
-def test_admin_price_change_without_reason_is_form_error(client, admin_user, indoor):
-    admin_user.is_superuser = True
-    admin_user.save()
+def test_pricelist_without_reason_is_form_error(client, admin_user, indoor):
     client.force_login(admin_user)
-    url = reverse("admin:proformas_equipmentmodel_change", args=[indoor.pk])
+    url = reverse("manufacturer_pricelist", args=[indoor.brand_id])
     response = client.post(
         url,
         {
-            "style": str(indoor.style_id),
-            "kind": indoor.kind,
-            "btu": str(indoor.btu),
+            "id": str(indoor.pk),
             "list_price": "510.00",
             "reason": "",
-            "_save": "Save",
         },
     )
     assert response.status_code == 200
     indoor.refresh_from_db()
     assert indoor.list_price == Decimal("500.00")
     assert ChangeLog.objects.filter(field="list_price").count() == 0
-
-
-def test_admin_price_change_keeps_kind(client, admin_user, indoor):
-    admin_user.is_superuser = True
-    admin_user.save()
-    client.force_login(admin_user)
-    url = reverse("admin:proformas_equipmentmodel_change", args=[indoor.pk])
-    response = client.post(
-        url,
-        {
-            "style": str(indoor.style_id),
-            "kind": EquipmentModel.Kind.OUTDOOR,
-            "btu": str(indoor.btu),
-            "list_price": "510.00",
-            "reason": "supplier increase",
-            "_save": "Save",
-        },
-    )
-    assert response.status_code == 302
-    indoor.refresh_from_db()
-    assert indoor.list_price == Decimal("510.00")
-    assert indoor.kind == EquipmentModel.Kind.OUTDOOR
-    assert ChangeLog.objects.filter(field="list_price").exists()
+    assert response.context["form"].errors.get("reason")
 
 
 def test_create_draft_writes_activity_log(db, staff_user, site):

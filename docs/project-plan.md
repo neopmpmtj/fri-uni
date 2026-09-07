@@ -351,6 +351,13 @@ Optional:
 - [x] `seed_demo` users, clients, sites, sample quotes (completed 2026-09-06)
 - [x] Manager (`staff`) cannot soft-delete clients or sites; admin can (completed 2026-09-06)
 
+- [x] Catalog: family → sub-family → item + manufacturer; internal_code; is_default; optional max_volume_m3 (completed 2026-09-06)
+- [x] Staff Items page (light) + setup cards/pages for Families, Sub-families, Manufacturers pricelist (completed 2026-09-06)
+- [x] Line drawer cascade Family → Sub-family → Manufacturer → Item with defaults (completed 2026-09-06)
+- [x] VAT rates (PT 23/13/6/Exempt) on items + Setup cards for VAT, Parameters, Tubing (completed 2026-09-06)
+- [x] Optional manufacturer on sub-family; New item / line drawer lock when set (completed 2026-09-06)
+- [x] Powers lookup (power + unit) replaces item BTU; setup card + line snapshots (completed 2026-09-06)
+
 Do not run `seed_demo` from production deploy.
 
 ---

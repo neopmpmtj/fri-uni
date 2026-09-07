@@ -4,25 +4,43 @@ from accounts.models import User
 from proformas.models import (
     Brand,
     Client,
-    EquipmentModel,
+    Family,
+    Item,
     Parameter,
+    Power,
     Proforma,
     Site,
-    Style,
+    SubFamily,
     TubingLength,
+    VatRate,
 )
 from proformas.services import add_line, cancel_proforma, create_draft, issue_proforma
 
 
 SIMPLE_BRANDS = ("Mitsubishi", "LG", "Nippon")
-SIMPLE_STYLE = "Split"
+SIMPLE_SUBFAMILY = "Split"
 BTUS = (9000, 12000, 18000)
 INDOOR_PRICES = {9000: "500.00", 12000: "650.00", 18000: "800.00"}
 OUTDOOR_PRICES = {9000: "550.00", 12000: "700.00", 18000: "900.00"}
 
+FAMILY_AC = "Air conditioners"
+FAMILY_UNDERFLOOR = "Underfloor heating"
+FAMILY_DHW = "Domestic hot water"
+
+AC_SUBFAMILIES = (
+    "Split",
+    "Sensira",
+    "Comfora",
+    "Perfera",
+    "Perfera Floor",
+    "Stylish",
+    "Emura",
+    "Ururu Sarara",
+)
+
 # Named ranges from Daikin PT air-to-air heat pumps (bombas de calor ar-ar):
 # https://www.daikin.pt/pt_pt/particular/products-and-advice/product-categories/heat-pumps/air-to-air-heat-pumps.html
-DAIKIN_STYLES = (
+DAIKIN_SUBFAMILIES = (
     "Sensira",
     "Comfora",
     "Perfera",
@@ -50,11 +68,34 @@ DAIKIN_OUTDOOR = {
     "Ururu Sarara": {9000: "820.00", 12000: "1020.00", 18000: "1280.00"},
 }
 
+BRAND_CODE = {
+    "Mitsubishi": "MIT",
+    "LG": "LG",
+    "Nippon": "NIP",
+    "Daikin": "DAI",
+}
+SUBFAMILY_CODE = {
+    "Split": "SPL",
+    "Sensira": "SEN",
+    "Comfora": "COM",
+    "Perfera": "PRF",
+    "Perfera Floor": "PRFF",
+    "Stylish": "STY",
+    "Emura": "EMU",
+    "Ururu Sarara": "URU",
+}
+
 TUBING = (("3.00", "25.00"), ("5.00", "40.00"), ("10.00", "70.00"))
 PARAMETERS = (
     ("currency", "EUR"),
     ("default_upfront_discount_percent", "10"),
     ("tubing_length_unit", "m"),
+)
+VAT_RATES = (
+    ("VAT23", "23%", "0.2300", True),
+    ("VAT13", "13%", "0.1300", False),
+    ("VAT6", "6%", "0.0600", False),
+    ("VAT_EXEMPT", "Exempt", "0.0000", False),
 )
 
 DEMO_ADMIN_EMAIL = "proforma-admin@fribila.dev"
@@ -133,35 +174,121 @@ def _live_get_or_create(model, defaults=None, **lookup):
     return model.objects.create(**data), True
 
 
-def _seed_capacity_models(style, indoor_prices, outdoor_prices):
-    for btu in BTUS:
+def _item_code(brand_name, sub_family_name, kind, power_amount):
+    brand = BRAND_CODE.get(brand_name, brand_name[:3].upper())
+    sub = SUBFAMILY_CODE.get(sub_family_name, sub_family_name[:3].upper())
+    kind_ch = "I" if kind == Item.Kind.INDOOR else "O"
+    return f"{brand}-{sub}-{kind_ch}-{int(power_amount) // 1000}"
+
+
+def _seed_powers():
+    by_amount = {}
+    for amount in BTUS:
+        row, _ = _live_get_or_create(
+            Power, power=amount, unit="BTU"
+        )
+        by_amount[amount] = row
+    return by_amount
+
+
+def _seed_capacity_items(
+    brand, sub_family, indoor_prices, outdoor_prices, vat_rate, powers_by_amount
+):
+    for amount in BTUS:
+        power = powers_by_amount[amount]
+        indoor_defaults = {
+            "list_price": Decimal(indoor_prices[amount]),
+            "internal_code": _item_code(
+                brand.name, sub_family.name, Item.Kind.INDOOR, amount
+            ),
+            "vat_rate": vat_rate,
+            "power": power,
+        }
+        if amount == 9000:
+            indoor_defaults["max_volume_m3"] = Decimal("20")
         _live_get_or_create(
-            EquipmentModel,
-            defaults={"list_price": Decimal(indoor_prices[btu])},
-            style=style,
-            kind=EquipmentModel.Kind.INDOOR,
-            btu=btu,
+            Item,
+            defaults=indoor_defaults,
+            brand=brand,
+            sub_family=sub_family,
+            kind=Item.Kind.INDOOR,
+            power=power,
         )
         _live_get_or_create(
-            EquipmentModel,
-            defaults={"list_price": Decimal(outdoor_prices[btu])},
-            style=style,
-            kind=EquipmentModel.Kind.OUTDOOR,
-            btu=btu,
+            Item,
+            defaults={
+                "list_price": Decimal(outdoor_prices[amount]),
+                "internal_code": _item_code(
+                    brand.name, sub_family.name, Item.Kind.OUTDOOR, amount
+                ),
+                "vat_rate": vat_rate,
+                "power": power,
+            },
+            brand=brand,
+            sub_family=sub_family,
+            kind=Item.Kind.OUTDOOR,
+            power=power,
         )
 
 
 def seed_catalog():
-    for name in SIMPLE_BRANDS:
-        brand, _ = _live_get_or_create(Brand, name=name)
-        style, _ = _live_get_or_create(Style, brand=brand, name=SIMPLE_STYLE)
-        _seed_capacity_models(style, INDOOR_PRICES, OUTDOOR_PRICES)
+    vat23 = None
+    for code, label, rate, is_default in VAT_RATES:
+        vat, _ = _live_get_or_create(
+            VatRate,
+            defaults={
+                "label": label,
+                "rate": Decimal(rate),
+                "is_default": is_default,
+            },
+            code=code,
+        )
+        if code == "VAT23":
+            vat23 = vat
+
+    powers_by_amount = _seed_powers()
+
+    ac, _ = _live_get_or_create(Family, defaults={"is_default": True}, name=FAMILY_AC)
+    _live_get_or_create(Family, name=FAMILY_UNDERFLOOR)
+    _live_get_or_create(Family, name=FAMILY_DHW)
 
     daikin, _ = _live_get_or_create(Brand, name="Daikin")
-    for style_name in DAIKIN_STYLES:
-        style, _ = _live_get_or_create(Style, brand=daikin, name=style_name)
-        _seed_capacity_models(
-            style, DAIKIN_INDOOR[style_name], DAIKIN_OUTDOOR[style_name]
+    sub_by_name = {}
+    for name in AC_SUBFAMILIES:
+        defaults = {"is_default": name == SIMPLE_SUBFAMILY}
+        if name in DAIKIN_SUBFAMILIES:
+            defaults["brand"] = daikin
+        sub, created = _live_get_or_create(
+            SubFamily, defaults=defaults, family=ac, name=name
+        )
+        if (
+            not created
+            and name in DAIKIN_SUBFAMILIES
+            and sub.brand_id != daikin.pk
+        ):
+            sub.brand = daikin
+            sub.save(update_fields=["brand"])
+        sub_by_name[name] = sub
+
+    for name in SIMPLE_BRANDS:
+        brand, _ = _live_get_or_create(Brand, name=name)
+        _seed_capacity_items(
+            brand,
+            sub_by_name[SIMPLE_SUBFAMILY],
+            INDOOR_PRICES,
+            OUTDOOR_PRICES,
+            vat23,
+            powers_by_amount,
+        )
+
+    for sub_name in DAIKIN_SUBFAMILIES:
+        _seed_capacity_items(
+            daikin,
+            sub_by_name[sub_name],
+            DAIKIN_INDOOR[sub_name],
+            DAIKIN_OUTDOOR[sub_name],
+            vat23,
+            powers_by_amount,
         )
 
     for length, price in TUBING:
@@ -195,12 +322,13 @@ def _ensure_user(email, password, *, role, is_superuser=False, reset_password=Fa
     return User.objects.create_user(email=email, password=password, role=role)
 
 
-def _equipment(brand, style, kind, btu):
-    return EquipmentModel.objects.get(
-        style__brand__name=brand,
-        style__name=style,
+def _catalog_item(brand, sub_family, kind, power_amount):
+    return Item.objects.get(
+        brand__name=brand,
+        sub_family__name=sub_family,
         kind=kind,
-        btu=btu,
+        power__power=power_amount,
+        power__unit="BTU",
     )
 
 
@@ -240,14 +368,14 @@ def _seed_clients_and_sites(actor):
 
 
 def _add_lines(proforma, actor, lines):
-    for item in lines:
+    for row in lines:
         add_line(
             proforma,
-            _equipment(item["brand"], item["style"], item["kind"], item["btu"]),
+            _catalog_item(row["brand"], row["style"], row["kind"], row["btu"]),
             actor,
-            quantity=item.get("quantity", 1),
-            extra_tubing=item.get("extra_tubing", False),
-            tubing_length=_tubing(item["tubing"]) if item.get("tubing") else None,
+            quantity=row.get("quantity", 1),
+            extra_tubing=row.get("extra_tubing", False),
+            tubing_length=_tubing(row["tubing"]) if row.get("tubing") else None,
         )
 
 
@@ -280,8 +408,8 @@ def seed_demo(*, password=DEMO_PASSWORD, reset_password=False):
     )
     sites = _seed_clients_and_sites(manager)
 
-    indoor = EquipmentModel.Kind.INDOOR
-    outdoor = EquipmentModel.Kind.OUTDOOR
+    indoor = Item.Kind.INDOOR
+    outdoor = Item.Kind.OUTDOOR
 
     _ensure_proforma(
         sites["Moradia Cascais"],

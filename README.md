@@ -6,7 +6,7 @@ Internal HVAC back office for creating **proforma invoices** — client quotes f
 
 ## What it does
 
-Staff sign in with email, pick language on the dashboard, then quote from a catalog (brand → style → model): client and site, equipment lines, optional extra tubing per line, extra labour and observations. **Issue** freezes a snapshot; staff can view the quote on screen and download a PDF. Clients do not log in.
+Staff sign in with email, pick language on the dashboard, then quote from a catalog (family → sub-family → item, plus manufacturer): client and site, equipment lines, optional extra tubing per line, extra labour and observations. **Issue** freezes a snapshot; staff can view the quote on screen and download a PDF. Clients do not log in.
 
 A management command (`create_proforma`) can create a proforma in one shot (same database, mandatory `--user`).
 

@@ -224,3 +224,101 @@ None.
 ### Open questions still open
 
 None.
+
+## Update 2026-09-06 — catalog families, items, setup cards
+
+Catalog is a staff workspace, not Django admin. Family is a product category; styles become sub-families; models become items.
+
+### What changed
+
+- **Family:** Air conditioners (default), Underfloor heating, Domestic hot water. Not a Daikin range name.
+- **Sub-family:** former style (Sensira, Split, …) belongs to a family, not a brand. The same sub-family can be used by any manufacturer.
+- **Item:** former catalog model. `brand` (manufacturer) + `sub_family` + `internal_code` (uppercase, uniqueness compared case-insensitive) + `kind` + `btu` + optional `max_volume_m3` (e.g. 9000 BTU indoor until 20 m³) + `list_price` (sales price).
+- **Defaults:** `is_default` on family, sub-family, brand, and item. New proforma lines pre-select the cascade (AC first).
+- **Surfaces:** dashboard **daily** cards (Clients, Sites, Proformas, Items) and **setup** cards (Families, Sub-families, Manufacturers). Manufacturers hold the sales pricelist. Items page has no price field. Django admin is not the catalog UI.
+- **CLI:** `--line` is `item_id:qty` (optional tubing id).
+- **Deferred:** volume-based auto-pick; indoor/outdoor `model_default_matches`. Field `max_volume_m3` is stored only.
+
+### Apps added/removed
+
+None.
+
+### Decisions
+
+- Extra catalog layer vs warehouse is manufacturer on the item.
+- Extra layer vs the previous HVAC schema is family (product category).
+- Sales price is edited only on the manufacturer pricelist, with a reason.
+
+### Open questions still open
+
+None.
+
+## Update 2026-09-06 — VAT on items + setup from dashboard
+
+Warehouse VAT lookup copied onto catalog items. Remaining operational config moves off Django admin onto dashboard Setup cards.
+
+### What changed
+
+- **VAT rates:** lookup table (`code`, `label`, `rate` as 0–1, `is_default`). Portugal IVA seed: 23% (default), 13%, 6%, Exempt. Required FK on each item. Staff enter percent; stored as a fraction.
+- **Items:** identity includes VAT (drawer + list column). Sales price still only on the manufacturer pricelist. Quoting/PDF do **not** apply VAT yet.
+- **Surfaces:** dashboard Setup cards now also include VAT rates, Parameters, and Tubing lengths. Django admin remains users and audit only.
+- **Parameters:** staff edit known keys only; no create/delete. Changing default discount does not rewrite issued proformas.
+- **Tubing lengths:** staff list+drawer; price change still needs a reason.
+
+### Apps added/removed
+
+None.
+
+### Decisions
+
+- Copy warehouse VAT *system*, not Mozambique 16% rates.
+- Catalog IVA is not an official tax invoice.
+
+### Open questions still open
+
+None.
+
+## Update 2026-09-06 — optional manufacturer on sub-family
+
+Sub-families may optionally point at one manufacturer so New item can lock that field.
+
+### What changed
+
+- **Sub-family:** optional `brand`. Named Daikin ranges (Perfera, Sensira, …) are seeded with Daikin. Split stays shared (no manufacturer).
+- **New/Edit item:** choosing a sub-family with a manufacturer fills Manufacturer and disables the control. Split still requires staff to pick a manufacturer.
+- **Line drawer:** same lock when the sub-family has a manufacturer.
+- Item still has its own required manufacturer FK.
+
+### Apps added/removed
+
+None.
+
+### Decisions
+
+- Manufacturer on sub-family is optional, not required. Do not split Split into per-brand rows.
+
+### Open questions still open
+
+None.
+
+## Update 2026-09-06 — power ratings lookup
+
+Replace raw BTU on items with a `powers` setup lookup (`power` + `unit`).
+
+### What changed
+
+- **Powers:** setup page + dashboard card. Seed: 9000 / 12000 / 18000 BTU.
+- **Items:** required FK to `powers`; New item uses a dropdown.
+- **Issued lines:** snapshot `power_value` + `power_unit` instead of `btu`.
+
+### Apps added/removed
+
+None.
+
+### Decisions
+
+- kW and other units can be added later via the same lookup table.
+
+### Open questions still open
+
+None.

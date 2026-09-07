@@ -31,6 +31,26 @@ def test_issue_freezes_line_price_after_catalog_change(issued, indoor):
     assert frozen_price == Decimal("500.00")
 
 
+def test_issue_snapshots_catalog_names(issued, indoor):
+    line = issued.lines.first()
+    assert line.family_name == "Air conditioners"
+    assert line.sub_family_name == "Split"
+    assert line.brand_name == "Mitsu"
+    assert line.internal_code == indoor.internal_code
+    assert line.power_value == 9000
+    assert line.power_unit == "BTU"
+
+
+def test_issue_snapshots_power_after_catalog_change(issued, indoor):
+    line = issued.lines.first()
+    indoor.power.unit = "BTU-changed"
+    indoor.power.save()
+    issued.refresh_from_db()
+    line.refresh_from_db()
+    assert line.power_value == 9000
+    assert line.power_unit == "BTU"
+
+
 def test_issue_snapshots_client_name(issued, site):
     original = issued.client_name
     site.client.name = "Renamed Ltd"

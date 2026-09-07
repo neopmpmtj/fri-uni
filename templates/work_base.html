@@ -19,6 +19,7 @@
             <a href="{% url 'client_list' %}" class="{% if nav_active == 'clients' %}is-active{% endif %}" data-i18n="clients">Clients</a>
             <a href="{% url 'site_list' %}" class="{% if nav_active == 'sites' %}is-active{% endif %}" data-i18n="sites">Sites</a>
             <a href="{% url 'proforma_list' %}" class="{% if nav_active == 'proformas' %}is-active{% endif %}" data-i18n="proformas">Proformas</a>
+            <a href="{% url 'item_list' %}" class="{% if nav_active == 'items' %}is-active{% endif %}" data-i18n="items">Items</a>
         </nav>
         <div class="topbar-actions">
             {% block actions %}{% endblock %}

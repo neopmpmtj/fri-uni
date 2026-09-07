@@ -6,11 +6,14 @@ from accounts.models import User
 from proformas.models import (
     Brand,
     Client,
-    EquipmentModel,
+    Family,
+    Item,
     Parameter,
+    Power,
     Site,
-    Style,
+    SubFamily,
     TubingLength,
+    VatRate,
 )
 
 
@@ -32,12 +35,28 @@ def indoor(db):
     Parameter.objects.get_or_create(
         key="default_upfront_discount_percent", defaults={"value": "10"}
     )
+    family = Family.objects.create(name="Air conditioners", is_default=True)
+    sub = SubFamily.objects.create(family=family, name="Split", is_default=True)
     brand = Brand.objects.create(name="Mitsu")
-    style = Style.objects.create(brand=brand, name="Split")
-    return EquipmentModel.objects.create(
-        style=style,
-        kind=EquipmentModel.Kind.INDOOR,
-        btu=9000,
+    vat, _ = VatRate.objects.get_or_create(
+        code="VAT23",
+        defaults={
+            "label": "23%",
+            "rate": Decimal("0.2300"),
+            "is_default": True,
+        },
+    )
+    power, _ = Power.objects.get_or_create(
+        power=9000, unit="BTU"
+    )
+    return Item.objects.create(
+        sub_family=sub,
+        brand=brand,
+        vat_rate=vat,
+        power=power,
+        internal_code="MIT-SPL-I-9",
+        kind=Item.Kind.INDOOR,
+        max_volume_m3=Decimal("20"),
         list_price=Decimal("500.00"),
     )
 
