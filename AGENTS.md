@@ -85,9 +85,9 @@ Mark complete during session-handoff: `- [x] ... (completed YYYY-MM-DD)`
 
 ## Session
 
-**Done:** Client/site contact and validation slice — optional NIF + address on clients; required phone/email; `countries` + 9-digit phone; optional contact name/position on clients and sites; HQ copies contact from client; merged `portuguese-nif-and-phone.mdc` rule. Migrations `0008`–`0011`. **95 tests** green.
+**Done:** Crash/freeze review [`docs/reviews/error-dead-ends-2026-09-07-1238.md`](docs/reviews/error-dead-ends-2026-09-07-1238.md) + H/M/L remediations (PDF/create-draft errors, confirm JS, atomic issue, catalog delete guards, row locks, `0016` cancelled→issued). Rejected overlay + new-draft form + list sort in same tree. **133 tests** green.
 
-**Not done:** Production deploy; letterhead; real prices; volume auto-pick; indoor/outdoor auto-pair; VAT on quote math/PDF; contact fields on issued-quote snapshots/PDF.
+**Not done:** Production deploy; letterhead; real prices; volume auto-pick; indoor/outdoor auto-pair; VAT on quote math/PDF; contact fields on issued-quote snapshots/PDF; git commit.
 
-**Next:** Manual test client + site drawers; then VAT-on-quote backlog. Read [`docs/handoff.md`](docs/handoff.md).
+**Next:** `migrate` + manual confirm-dialog check; commit when ready; VAT-on-quote backlog. Read [`docs/handoff.md`](docs/handoff.md).
 

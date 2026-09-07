@@ -1,6 +1,6 @@
 # Session handoff
 
-> **Last updated:** 2026-09-07 09:43 WEST (Europe/Lisbon)  
+> **Last updated:** 2026-09-07 12:50 WEST (Europe/Lisbon)  
 > Replace with the current date and time whenever you edit this file.
 
 ## Project
@@ -17,23 +17,23 @@ Staff app is **`proformas`** (`accounts` is User/login only). Playbook: [`docs/p
 
 Catalog: **family → sub-family → item**, plus **manufacturer** (`Brand`) and **VAT rate** on the item. Sales price is edited only on the manufacturer pricelist (reason required). Django admin is users and audit only.
 
-Do not run `seed_demo` in production. Fresh local DB: `rm -f db.sqlite3`, then `migrate` and `seed_demo`. Restart `runserver` after schema changes.
+Do not run `seed_demo` in production. Fresh local DB: `rm -f db.sqlite3`, then `migrate` and `seed_demo`. Restart `runserver` after schema changes. After pulling this tree, run **`migrate`** (migrations `0015` + `0016`).
+
+**Proforma document life:** `draft` | `issued` only. **Accepted** and **rejected** are overlays (`accepted_at` / `rejected_at`), mutually exclusive (clear one before marking the other). **Change** is blocked when accepted or rejected (or already superseded). There is no `cancelled` status (legacy rows mapped to `issued` in `0016`).
 
 ## Done (this session)
 
-- **Client create/edit field rules:** NIF and billing address optional; phone and email required; kind/country defaults unchanged (Person, PT)
-- **NIF validation:** distinct fewer/more than 9 digits; no silent trim (`configure_nine_digit_form_field` on forms)
-- **`countries` table** (PT, ES, FR, DE, BE); client `phone_country` + 9-digit national `phone`; `+351` prefix in UI
-- **Client contact (optional):** `contact_name`, `contact_position` (CEO, CFO, Manager, Director, Other)
-- **Site contact block:** `phone_country`, `phone`, `email` (required), optional `contact_name` / `contact_position`; site form mirrors client phone UI
-- **HQ site:** on new client, `save_client` copies address + phone/email/contact from client to headquarters site
-- **Migrations:** `0008`–`0011` (client field requirements, country/phone, client contact, site contact)
-- **Cursor rule:** merged [`.cursor/rules/portuguese-nif-and-phone.mdc`](../.cursor/rules/portuguese-nif-and-phone.mdc) (replaces separate NIF/phone rules)
-- **Tests:** 95 passing (`pytest`)
+- **Crash/freeze audit:** [`docs/reviews/error-dead-ends-2026-09-07-1238.md`](reviews/error-dead-ends-2026-09-07-1238.md) (independent review + Bugbot comparison)
+- **H fixes:** PDF build errors → redirect + message (not 500); new-draft create catches `ValidationError`; `ParameterForm` validates default discount percent
+- **M fixes:** Hardened accept/reject confirm JS (`proforma-detail.js`); `issue_proforma` atomic + row lock; catalog delete guards when used on lines; `select_for_update` on accept/reject/unaccept/unreject/change; migration `0016` maps legacy `cancelled` → `issued`
+- **L fixes:** PDF activity log failure no longer blocks download; Issue header validation flash; staff delete → message not bare 403; drawer `IntegrityError` → form error; `seed_demo` tolerates failed demo change
+- **Rejected overlay (same tree):** `rejected_at`, migrations `0015`/`0016`, list/detail pills, confirm before mark accepted/rejected, tests in `test_rejected.py`
+- **New-draft form + list sort (same tree):** client-then-site drawer, sortable proforma list, tests in `test_new_draft_form.py` / `test_proforma_list_sort.py`
+- **Tests:** **133 passing** (`pytest`); new `test_error_dead_ends.py`
 
 ## Done (earlier)
 
-- Phases 1–8, catalog slice, VAT on items, setup cards, line cascade, `seed_demo`, review remediations (see prior handoff bullets in git history)
+- Phases 1–8, catalog slice, VAT on items, setup cards, line cascade, `seed_demo`, client/site NIF+phone+contact, `accepted_at`, Change/supersede links, client billing identity (see prior handoff / git history)
 
 ## Not done
 
@@ -45,12 +45,13 @@ Do not run `seed_demo` in production. Fresh local DB: `rm -f db.sqlite3`, then `
 - Proforma snapshot fields for site/client contact on issued PDFs
 - Email send / stored PDFs / Google OAuth / dark theme
 - Enable non-PT phone countries in UI (table seeded; PT only disabled selector)
+- **Git commit** of this working tree
 
 ## Next
 
-1. **Manual UI:** New client (minimal: name + phone + email only); NIF blank and 10-digit error; New site with phone/email/contact; confirm HQ inherits client contact on create
-2. Run `seed_demo` if demo data needed after fresh migrate
-3. Quoting still ignores VAT — unchanged backlog item
+1. Run `migrate` locally if not already (`0015`, `0016`); hard-refresh issued detail — confirm Mark accepted / Mark rejected (No cancels, Yes applies)
+2. Commit when ready (rejected overlay + error-dead-end fixes + new-draft/sort in one or split PRs)
+3. VAT on quote math / PDF — unchanged product backlog
 
 ## Commands
 

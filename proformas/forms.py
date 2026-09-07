@@ -18,6 +18,7 @@ from .models import (
 )
 from .services import (
     configure_nine_digit_form_field,
+    discount_percent_value,
     normalize_postal_code,
     percent_to_rate,
     validate_internal_code,
@@ -208,14 +209,41 @@ class SiteForm(forms.ModelForm):
         return (self.cleaned_data.get("contact_name") or "").strip()
 
 
+class SiteClientSelect(forms.Select):
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(
+            name, value, label, selected, index, subindex=subindex, attrs=attrs
+        )
+        instance = getattr(value, "instance", None)
+        if instance is not None and hasattr(instance, "client_id"):
+            option["attrs"]["data-client"] = str(instance.client_id)
+        return option
+
+
 class NewDraftForm(forms.Form):
-    site = forms.ModelChoiceField(queryset=Site.objects.none())
+    client = forms.ModelChoiceField(queryset=Client.objects.none())
+    site = forms.ModelChoiceField(queryset=Site.objects.none(), widget=SiteClientSelect)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["client"].queryset = Client.objects.order_by("name")
         self.fields["site"].queryset = Site.objects.select_related("client").order_by(
-            "client__name", "alias_1"
+            "-is_headquarters", "alias_1"
         )
+        if self.is_bound:
+            client_id = self.data.get("client")
+            if client_id:
+                self.fields["site"].queryset = self.fields["site"].queryset.filter(
+                    client_id=client_id
+                )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        client = cleaned_data.get("client")
+        site = cleaned_data.get("site")
+        if client and site and site.client_id != client.pk:
+            raise ValidationError("Site does not belong to the selected client.")
+        return cleaned_data
 
 
 class ProformaHeaderForm(forms.Form):
@@ -484,6 +512,20 @@ class ParameterForm(forms.ModelForm):
         model = Parameter
         fields = ("value",)
         widgets = {"value": forms.TextInput()}
+
+    def clean(self):
+        cleaned = super().clean()
+        value = cleaned.get("value")
+        if (
+            value is not None
+            and self.instance.pk
+            and self.instance.key == "default_upfront_discount_percent"
+        ):
+            try:
+                discount_percent_value(value)
+            except ValidationError as exc:
+                self.add_error("value", exc)
+        return cleaned
 
 
 class TubingLengthForm(forms.ModelForm):

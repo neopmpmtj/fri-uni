@@ -163,22 +163,21 @@ First-class page. **Do not** nest sites inside the client drawer the way warehou
 
 ### Proforma list
 
-- Toolbar: search/filter by status (`draft` / `issued` / `cancelled`), **New draft** (must pick a site).
-- `.grid`: number (link to work page), site/client, status pills (+ Accepted / Superseded when set), grand total, updated, **Actions**.
-- **Actions:** `draft` → **Edit**; `issued` not accepted not superseded → **Change** (POST); accepted / cancelled / superseded → no action.
+- Toolbar: search/filter by status (`draft` / `issued`), **New draft** (must pick a site).
+- `.grid`: number (link to work page), site/client, status pills (+ Accepted / Rejected / Superseded when set), grand total, updated, **Actions**.
+- **Actions:** `draft` → **Edit**. `issued` not accepted not rejected not superseded → **Change** (left) plus **Mark accepted** / **Mark rejected** (right, Yes/No confirm). `issued` + accepted → **Clear accepted** only. `issued` + rejected → **Clear rejected** only. Superseded → no action.
 - Implementation: Phase 5 + supersede slice.
 
 ### Proforma work page
 
 Analog of a warehouse **console**, not a Django form wizard.
 
-- Header **on the page** (not in a drawer): upfront discount %, extra labour, observations; live totals; **Issue** / **Cancel** / **Change** when allowed.
+- Header **on the page** (not in a drawer): upfront discount %, extra labour, observations; live totals; **Issue** / **Change** when allowed.
 - Lines: `.grid` (item snapshot or live catalog name while draft, qty, tubing, line total).
 - **Add line / Edit line = drawer:** Family → Sub-family → Manufacturer → Item (defaults pre-selected), quantity, extra tubing boolean, tubing length when needed. If the sub-family has a manufacturer, that control is filled and inactive.
 - **Draft:** editable; optional “Revision of PF-…” when `replaces` is set.
-- **Issued:** read-only; **Change** (copy to new draft) when not accepted and not superseded; **Mark accepted** / **Cancel** as today; **View quote** / **Download PDF**.
+- **Issued:** read-only; **Change** (copy to new draft) when not accepted, not rejected, and not superseded; **Mark accepted** / **Mark rejected** when neither is set (Yes/No confirm, Yes default); **Clear accepted** or **Clear rejected** when one is set; **View quote** / **Download PDF**. Action row: Change left, accepted/rejected (or clear) grouped on the right; View quote + Download PDF on the next row, side by side.
 - **Issued superseded:** read-only; link to replacement draft; no Change.
-- **Cancelled:** read-only; View quote / PDF only; no unlock.
 - Implementation: Phases 5–7 + supersede slice.
 
 ### Issued quote view
@@ -207,7 +206,7 @@ Document-like page for the client-facing quote (snapshots, line table, totals, o
 | 1 | Login, dashboard (language + cards + gear), work-page shell (topbar, empty home-quality chrome), i18n JS |
 | 4 | Clients and sites list + drawer |
 | 5 | Proforma list + work page + line drawer (draft) |
-| 6 | Issue/cancel on the work page; issued read-only |
+| 6 | Issue / mark accepted or rejected on the work page; issued read-only |
 | 7 | Issued quote view + PDF download |
 | 3, 8 | No extra staff chrome (admin / CLI) |
 

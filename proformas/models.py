@@ -410,7 +410,6 @@ class Proforma(AuditedModel):
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"
         ISSUED = "issued", "Issued"
-        CANCELLED = "cancelled", "Cancelled"
 
     site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name="proformas")
     number = models.CharField(max_length=32)
@@ -418,6 +417,7 @@ class Proforma(AuditedModel):
         max_length=16, choices=Status.choices, default=Status.DRAFT
     )
     accepted_at = models.DateTimeField(null=True, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
     superseded_by = models.ForeignKey(
         "self",
         null=True,
@@ -486,6 +486,7 @@ class Proforma(AuditedModel):
         return (
             self.status == self.Status.ISSUED
             and self.accepted_at is None
+            and self.rejected_at is None
             and self.superseded_by_id is None
         )
 

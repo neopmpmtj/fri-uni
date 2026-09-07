@@ -448,21 +448,33 @@ def delete_contact_position(contact_position, user):
 
 def delete_family(family, user):
     require_delete_permission(user)
+    if ProformaLine.objects.filter(item__sub_family__family=family).exists():
+        raise ValidationError("Cannot delete a family that is used on a proforma line.")
     family.soft_delete(user)
 
 
 def delete_sub_family(sub_family, user):
     require_delete_permission(user)
+    if ProformaLine.objects.filter(item__sub_family=sub_family).exists():
+        raise ValidationError(
+            "Cannot delete a sub-family that is used on a proforma line."
+        )
     sub_family.soft_delete(user)
 
 
 def delete_brand(brand, user):
     require_delete_permission(user)
+    if ProformaLine.objects.filter(item__brand=brand).exists():
+        raise ValidationError(
+            "Cannot delete a manufacturer that is used on a proforma line."
+        )
     brand.soft_delete(user)
 
 
 def delete_item(item, user):
     require_delete_permission(user)
+    if ProformaLine.objects.filter(item=item).exists():
+        raise ValidationError("Cannot delete an item that is used on a proforma line.")
     item.soft_delete(user)
 
 
@@ -649,105 +661,139 @@ def save_parameter(parameter, user):
 
 
 def issue_proforma(proforma, user):
-    require_draft(proforma)
-    if not proforma.lines.exists():
-        raise ValidationError("Cannot issue a proforma with no lines.")
-    recompute_draft_totals(proforma)
-    site = proforma.site
-    client = site.client
-    proforma.client_name = client.name
-    proforma.client_kind = client.kind
-    proforma.client_tax_number = client.tax_number
-    proforma.client_street = client.street
-    proforma.client_postal_code = client.postal_code
-    proforma.client_city = client.city
-    proforma.client_country_code = client.country_code
-    proforma.client_phone = client.phone or ""
-    proforma.client_email = client.email or ""
-    proforma.site_alias_1 = site.alias_1
-    proforma.site_alias_2 = site.alias_2 or ""
-    proforma.site_alias_3 = site.alias_3 or ""
-    proforma.site_alias_4 = site.alias_4 or ""
-    proforma.site_street = site.street or ""
-    proforma.site_postal_code = site.postal_code or ""
-    proforma.site_city = site.city or ""
-    proforma.site_notes = site.notes or ""
-    for line in proforma.lines.select_related(
-        "item__sub_family__family", "item__brand", "item__power", "tubing_length"
-    ):
-        line.brand_name = line.item.brand.name
-        line.family_name = line.item.sub_family.family.name
-        line.sub_family_name = line.item.sub_family.name
-        line.internal_code = line.item.internal_code
-        line.kind = line.item.kind
-        line.power_value = line.item.power.power
-        line.power_unit = line.item.power.unit
-        line.tubing_length_value = (
-            line.tubing_length.length if line.tubing_length_id else None
+    with transaction.atomic():
+        proforma = Proforma.objects.select_for_update().get(pk=proforma.pk)
+        require_draft(proforma)
+        if not proforma.lines.exists():
+            raise ValidationError("Cannot issue a proforma with no lines.")
+        recompute_draft_totals(proforma)
+        site = proforma.site
+        client = site.client
+        proforma.client_name = client.name
+        proforma.client_kind = client.kind
+        proforma.client_tax_number = client.tax_number
+        proforma.client_street = client.street
+        proforma.client_postal_code = client.postal_code
+        proforma.client_city = client.city
+        proforma.client_country_code = client.country_code
+        proforma.client_phone = client.phone or ""
+        proforma.client_email = client.email or ""
+        proforma.site_alias_1 = site.alias_1
+        proforma.site_alias_2 = site.alias_2 or ""
+        proforma.site_alias_3 = site.alias_3 or ""
+        proforma.site_alias_4 = site.alias_4 or ""
+        proforma.site_street = site.street or ""
+        proforma.site_postal_code = site.postal_code or ""
+        proforma.site_city = site.city or ""
+        proforma.site_notes = site.notes or ""
+        for line in proforma.lines.select_related(
+            "item__sub_family__family", "item__brand", "item__power", "tubing_length"
+        ):
+            line.brand_name = line.item.brand.name
+            line.family_name = line.item.sub_family.family.name
+            line.sub_family_name = line.item.sub_family.name
+            line.internal_code = line.item.internal_code
+            line.kind = line.item.kind
+            line.power_value = line.item.power.power
+            line.power_unit = line.item.power.unit
+            line.tubing_length_value = (
+                line.tubing_length.length if line.tubing_length_id else None
+            )
+            line.updated_by = user
+            line.save()
+        proforma.status = Proforma.Status.ISSUED
+        proforma.updated_by = user
+        proforma.save()
+        log_activity(
+            action="issue_proforma",
+            object_type="proforma",
+            object_id=proforma.pk,
+            actor=user,
         )
-        line.updated_by = user
-        line.save()
-    proforma.status = Proforma.Status.ISSUED
-    proforma.updated_by = user
-    proforma.save()
-    log_activity(
-        action="issue_proforma",
-        object_type="proforma",
-        object_id=proforma.pk,
-        actor=user,
-    )
-    return proforma
-
-
-def cancel_proforma(proforma, user):
-    if proforma.status != Proforma.Status.ISSUED:
-        raise ValidationError("Only issued proformas can be cancelled.")
-    proforma.status = Proforma.Status.CANCELLED
-    proforma.accepted_at = None
-    proforma.updated_by = user
-    proforma.save(update_fields=["status", "accepted_at", "updated_at", "updated_by"])
-    log_activity(
-        action="cancel_proforma",
-        object_type="proforma",
-        object_id=proforma.pk,
-        actor=user,
-    )
     return proforma
 
 
 def accept_proforma(proforma, user):
-    if proforma.status != Proforma.Status.ISSUED:
-        raise ValidationError("Only issued proformas can be marked accepted.")
-    if proforma.superseded_by_id is not None:
-        raise ValidationError("Superseded proformas cannot be marked accepted.")
-    if proforma.accepted_at is not None:
-        raise ValidationError("Proforma is already marked accepted.")
-    proforma.accepted_at = timezone.now()
-    proforma.updated_by = user
-    proforma.save(update_fields=["accepted_at", "updated_at", "updated_by"])
-    log_activity(
-        action="accept_proforma",
-        object_type="proforma",
-        object_id=proforma.pk,
-        actor=user,
-    )
+    with transaction.atomic():
+        proforma = Proforma.objects.select_for_update().get(pk=proforma.pk)
+        if proforma.status != Proforma.Status.ISSUED:
+            raise ValidationError("Only issued proformas can be marked accepted.")
+        if proforma.superseded_by_id is not None:
+            raise ValidationError("Superseded proformas cannot be marked accepted.")
+        if proforma.rejected_at is not None:
+            raise ValidationError("Rejected proformas cannot be marked accepted.")
+        if proforma.accepted_at is not None:
+            raise ValidationError("Proforma is already marked accepted.")
+        proforma.accepted_at = timezone.now()
+        proforma.updated_by = user
+        proforma.save(update_fields=["accepted_at", "updated_at", "updated_by"])
+        log_activity(
+            action="accept_proforma",
+            object_type="proforma",
+            object_id=proforma.pk,
+            actor=user,
+        )
     return proforma
 
 
 def unaccept_proforma(proforma, user):
-    if proforma.status != Proforma.Status.ISSUED:
-        raise ValidationError("Only issued proformas can be unmarked.")
-    if proforma.accepted_at is None:
-        raise ValidationError("Proforma is not marked accepted.")
-    proforma.accepted_at = None
-    proforma.updated_by = user
-    proforma.save(update_fields=["accepted_at", "updated_at", "updated_by"])
-    log_activity(
-        action="unaccept_proforma",
-        object_type="proforma",
-        object_id=proforma.pk,
-        actor=user,
-    )
+    with transaction.atomic():
+        proforma = Proforma.objects.select_for_update().get(pk=proforma.pk)
+        if proforma.status != Proforma.Status.ISSUED:
+            raise ValidationError("Only issued proformas can be unmarked.")
+        if proforma.accepted_at is None:
+            raise ValidationError("Proforma is not marked accepted.")
+        proforma.accepted_at = None
+        proforma.updated_by = user
+        proforma.save(update_fields=["accepted_at", "updated_at", "updated_by"])
+        log_activity(
+            action="unaccept_proforma",
+            object_type="proforma",
+            object_id=proforma.pk,
+            actor=user,
+        )
+    return proforma
+
+
+def reject_proforma(proforma, user):
+    with transaction.atomic():
+        proforma = Proforma.objects.select_for_update().get(pk=proforma.pk)
+        if proforma.status != Proforma.Status.ISSUED:
+            raise ValidationError("Only issued proformas can be marked rejected.")
+        if proforma.superseded_by_id is not None:
+            raise ValidationError("Superseded proformas cannot be marked rejected.")
+        if proforma.accepted_at is not None:
+            raise ValidationError("Accepted proformas cannot be marked rejected.")
+        if proforma.rejected_at is not None:
+            raise ValidationError("Proforma is already marked rejected.")
+        proforma.rejected_at = timezone.now()
+        proforma.updated_by = user
+        proforma.save(update_fields=["rejected_at", "updated_at", "updated_by"])
+        log_activity(
+            action="reject_proforma",
+            object_type="proforma",
+            object_id=proforma.pk,
+            actor=user,
+        )
+    return proforma
+
+
+def unreject_proforma(proforma, user):
+    with transaction.atomic():
+        proforma = Proforma.objects.select_for_update().get(pk=proforma.pk)
+        if proforma.status != Proforma.Status.ISSUED:
+            raise ValidationError("Only issued proformas can be unmarked.")
+        if proforma.rejected_at is None:
+            raise ValidationError("Proforma is not marked rejected.")
+        proforma.rejected_at = None
+        proforma.updated_by = user
+        proforma.save(update_fields=["rejected_at", "updated_at", "updated_by"])
+        log_activity(
+            action="unreject_proforma",
+            object_type="proforma",
+            object_id=proforma.pk,
+            actor=user,
+        )
     return proforma
 
 
@@ -756,15 +802,18 @@ def is_active_for_stats(proforma):
 
 
 def change_proforma(proforma, user):
-    if not proforma.can_change:
-        if proforma.status != Proforma.Status.ISSUED:
-            raise ValidationError("Only issued proformas can be changed.")
-        if proforma.accepted_at is not None:
-            raise ValidationError("Accepted proformas cannot be changed.")
-        if proforma.superseded_by_id is not None:
-            raise ValidationError("This proforma was already changed.")
-        raise ValidationError("This proforma cannot be changed.")
     with transaction.atomic():
+        proforma = Proforma.objects.select_for_update().get(pk=proforma.pk)
+        if not proforma.can_change:
+            if proforma.status != Proforma.Status.ISSUED:
+                raise ValidationError("Only issued proformas can be changed.")
+            if proforma.accepted_at is not None:
+                raise ValidationError("Accepted proformas cannot be changed.")
+            if proforma.rejected_at is not None:
+                raise ValidationError("Rejected proformas cannot be changed.")
+            if proforma.superseded_by_id is not None:
+                raise ValidationError("This proforma was already changed.")
+            raise ValidationError("This proforma cannot be changed.")
         new = create_draft(
             proforma.site,
             user,
@@ -787,11 +836,11 @@ def change_proforma(proforma, user):
         proforma.superseded_by = new
         proforma.updated_by = user
         proforma.save(update_fields=["superseded_by", "updated_at", "updated_by"])
-    log_activity(
-        action="change_proforma",
-        object_type="proforma",
-        object_id=proforma.pk,
-        actor=user,
-        details=json.dumps({"new_id": new.pk, "new_number": new.number}),
-    )
+        log_activity(
+            action="change_proforma",
+            object_type="proforma",
+            object_id=proforma.pk,
+            actor=user,
+            details=json.dumps({"new_id": new.pk, "new_number": new.number}),
+        )
     return new

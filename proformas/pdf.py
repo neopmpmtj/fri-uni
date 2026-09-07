@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.template.loader import render_to_string
 from weasyprint import HTML
 
@@ -18,4 +19,7 @@ def build_proforma_pdf(proforma, lang="en"):
             "html_lang": "pt-PT" if lang == "pt" else "en",
         },
     )
-    return HTML(string=html).write_pdf()
+    try:
+        return HTML(string=html).write_pdf()
+    except OSError as exc:
+        raise ValidationError("Could not generate PDF.") from exc

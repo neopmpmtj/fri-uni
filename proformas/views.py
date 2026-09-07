@@ -2,7 +2,8 @@ from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import IntegrityError
 from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -54,14 +55,21 @@ ITEM_SORT_FIELDS = {
     "power": ["power__power", "power__unit"],
 }
 
+PROFORMA_SORT_FIELDS = {
+    "number": ["number"],
+    "site": ["site__client__name", "site__alias_1"],
+    "total": ["grand_total"],
+    "updated": ["updated_at"],
+}
 
-def _item_sort_context(request):
-    sort = request.GET.get("sort", "internal_code").strip()
-    if sort not in ITEM_SORT_FIELDS:
-        sort = "internal_code"
-    direction = request.GET.get("dir", "asc").strip().lower()
+
+def _sort_context(request, fields, *, default_sort, default_dir="asc", tie_breaker=None):
+    sort = request.GET.get("sort", default_sort).strip()
+    if sort not in fields:
+        sort = default_sort
+    direction = request.GET.get("dir", "").strip().lower()
     if direction not in ("asc", "desc"):
-        direction = "asc"
+        direction = default_dir if sort == default_sort else "asc"
 
     def link_for(col):
         params = request.GET.copy()
@@ -73,16 +81,35 @@ def _item_sort_context(request):
         return params.urlencode()
 
     prefix = "-" if direction == "desc" else ""
-    ordering = [f"{prefix}{field}" for field in ITEM_SORT_FIELDS[sort]]
-    if sort != "internal_code":
-        ordering.append("internal_code")
+    ordering = [f"{prefix}{field}" for field in fields[sort]]
+    if tie_breaker and sort != tie_breaker:
+        ordering.append(tie_breaker)
 
     return {
         "sort": sort,
         "dir": direction,
-        "sort_urls": {col: link_for(col) for col in ITEM_SORT_FIELDS},
+        "sort_urls": {col: link_for(col) for col in fields},
         "ordering": ordering,
     }
+
+
+def _item_sort_context(request):
+    return _sort_context(
+        request,
+        ITEM_SORT_FIELDS,
+        default_sort="internal_code",
+        tie_breaker="internal_code",
+    )
+
+
+def _proforma_sort_context(request):
+    return _sort_context(
+        request,
+        PROFORMA_SORT_FIELDS,
+        default_sort="number",
+        default_dir="desc",
+        tie_breaker="number",
+    )
 
 
 def _save_audited(form, user):
@@ -111,6 +138,8 @@ def client_list(request):
                 services.delete_client(get_object_or_404(Client, pk=pk), request.user)
             except ValidationError as exc:
                 messages.error(request, _validation_message(exc))
+            except PermissionDenied as exc:
+                messages.error(request, str(exc))
             return redirect("client_list")
         instance = get_object_or_404(Client, pk=pk) if pk else None
         form = ClientForm(request.POST, instance=instance)
@@ -158,6 +187,8 @@ def site_list(request):
                 services.delete_site(get_object_or_404(Site, pk=pk), request.user)
             except ValidationError as exc:
                 messages.error(request, _validation_message(exc))
+            except PermissionDenied as exc:
+                messages.error(request, str(exc))
             return redirect("site_list")
         instance = get_object_or_404(Site, pk=pk) if pk else None
         form = SiteForm(request.POST, instance=instance)
@@ -201,14 +232,21 @@ def proforma_list(request):
     if request.method == "POST" and request.POST.get("action") == "create":
         draft_form = NewDraftForm(request.POST)
         if draft_form.is_valid():
-            proforma = services.create_draft(draft_form.cleaned_data["site"], request.user)
-            return redirect("proforma_detail", pk=proforma.pk)
+            try:
+                proforma = services.create_draft(
+                    draft_form.cleaned_data["site"], request.user
+                )
+            except ValidationError as exc:
+                draft_form.add_error(None, exc)
+            else:
+                return redirect("proforma_detail", pk=proforma.pk)
 
     q = request.GET.get("q", "").strip()
     status = request.GET.get("status", "").strip()
+    sort_ctx = _proforma_sort_context(request)
     rows = Proforma.objects.select_related(
         "site__client", "superseded_by"
-    ).order_by("-updated_at")
+    ).order_by(*sort_ctx["ordering"])
     if q:
         rows = rows.filter(number__icontains=q)
     if status:
@@ -223,6 +261,9 @@ def proforma_list(request):
             "draft_form": draft_form,
             "q": q,
             "status": status,
+            "sort": sort_ctx["sort"],
+            "dir": sort_ctx["dir"],
+            "sort_urls": sort_ctx["sort_urls"],
             "drawer_open": drawer_open,
             "nav_active": "proformas",
             "page_title": "Proformas",
@@ -241,7 +282,34 @@ def proforma_change(request):
     except ValidationError as exc:
         messages.error(request, _validation_message(exc))
         return redirect("proforma_detail", pk=proforma.pk)
+    except IntegrityError:
+        messages.error(request, "This proforma was already changed.")
+        return redirect("proforma_detail", pk=proforma.pk)
     return redirect("proforma_detail", pk=new.pk)
+
+
+OUTCOME_ACTIONS = {
+    "accept_proforma": services.accept_proforma,
+    "unaccept_proforma": services.unaccept_proforma,
+    "reject_proforma": services.reject_proforma,
+    "unreject_proforma": services.unreject_proforma,
+}
+
+
+@login_required
+def proforma_outcome(request):
+    if request.method != "POST":
+        return redirect("proforma_list")
+    proforma = get_object_or_404(Proforma, pk=request.POST.get("id"))
+    handler = OUTCOME_ACTIONS.get(request.POST.get("action"))
+    if handler is None:
+        messages.error(request, "Unknown action.")
+        return redirect("proforma_list")
+    try:
+        handler(proforma, request.user)
+    except ValidationError as exc:
+        messages.error(request, _validation_message(exc))
+    return redirect("proforma_list")
 
 
 @login_required
@@ -268,11 +336,8 @@ def proforma_detail(request, pk):
         if action in {"save_header", "delete_line", "save_line", "issue"} and not is_draft:
             messages.error(request, "Only draft proformas can be edited.")
             return redirect("proforma_detail", pk=proforma.pk)
-        if action == "cancel_proforma" and proforma.status != Proforma.Status.ISSUED:
-            messages.error(request, "Only issued proformas can be cancelled.")
-            return redirect("proforma_detail", pk=proforma.pk)
-        if action in {"accept_proforma", "unaccept_proforma"} and proforma.status != Proforma.Status.ISSUED:
-            messages.error(request, "Only issued proformas can be marked accepted.")
+        if action in {"accept_proforma", "unaccept_proforma", "reject_proforma", "unreject_proforma"} and proforma.status != Proforma.Status.ISSUED:
+            messages.error(request, "Only issued proformas can be marked accepted or rejected.")
             return redirect("proforma_detail", pk=proforma.pk)
         try:
             if action == "save_header" and is_draft:
@@ -339,14 +404,18 @@ def proforma_detail(request, pk):
                     proforma.refresh_from_db()
                     services.issue_proforma(proforma, request.user)
                     return redirect("proforma_detail", pk=proforma.pk)
-            elif action == "cancel_proforma" and proforma.status == Proforma.Status.ISSUED:
-                services.cancel_proforma(proforma, request.user)
-                return redirect("proforma_detail", pk=proforma.pk)
+                messages.error(request, "Fix the header fields before issuing.")
             elif action == "accept_proforma" and proforma.status == Proforma.Status.ISSUED:
                 services.accept_proforma(proforma, request.user)
                 return redirect("proforma_detail", pk=proforma.pk)
             elif action == "unaccept_proforma" and proforma.status == Proforma.Status.ISSUED:
                 services.unaccept_proforma(proforma, request.user)
+                return redirect("proforma_detail", pk=proforma.pk)
+            elif action == "reject_proforma" and proforma.status == Proforma.Status.ISSUED:
+                services.reject_proforma(proforma, request.user)
+                return redirect("proforma_detail", pk=proforma.pk)
+            elif action == "unreject_proforma" and proforma.status == Proforma.Status.ISSUED:
+                services.unreject_proforma(proforma, request.user)
                 return redirect("proforma_detail", pk=proforma.pk)
         except ValidationError as exc:
             messages.error(request, _validation_message(exc))
@@ -380,8 +449,8 @@ def proforma_detail(request, pk):
             "drawer_open": drawer_open,
             "is_draft": is_draft,
             "is_issued": proforma.status == Proforma.Status.ISSUED,
-            "is_cancelled": proforma.status == Proforma.Status.CANCELLED,
             "is_accepted": proforma.accepted_at is not None,
+            "is_rejected": proforma.rejected_at is not None,
             "is_superseded": proforma.is_superseded,
             "can_change": proforma.can_change,
             "nav_active": "proformas",
@@ -394,7 +463,7 @@ def _quote_lang(request):
     return normalize_lang(request.COOKIES.get("fu-lang", "en"))
 
 
-def _issued_or_cancelled(proforma):
+def _issued_quote(proforma):
     if proforma.status == Proforma.Status.DRAFT:
         raise Http404("Quote is available after issue.")
     return proforma
@@ -402,7 +471,7 @@ def _issued_or_cancelled(proforma):
 
 @login_required
 def proforma_quote(request, pk):
-    proforma = _issued_or_cancelled(
+    proforma = _issued_quote(
         get_object_or_404(Proforma.objects.select_related("site"), pk=pk)
     )
     lang = _quote_lang(request)
@@ -422,15 +491,22 @@ def proforma_quote(request, pk):
 
 @login_required
 def proforma_pdf(request, pk):
-    proforma = _issued_or_cancelled(get_object_or_404(Proforma, pk=pk))
+    proforma = _issued_quote(get_object_or_404(Proforma, pk=pk))
     lang = _quote_lang(request)
-    pdf_bytes = build_proforma_pdf(proforma, lang=lang)
-    services.log_activity(
-        action="download_pdf",
-        object_type="proforma",
-        object_id=proforma.pk,
-        actor=request.user,
-    )
+    try:
+        pdf_bytes = build_proforma_pdf(proforma, lang=lang)
+    except ValidationError as exc:
+        messages.error(request, _validation_message(exc))
+        return redirect("proforma_detail", pk=proforma.pk)
+    try:
+        services.log_activity(
+            action="download_pdf",
+            object_type="proforma",
+            object_id=proforma.pk,
+            actor=request.user,
+        )
+    except Exception:
+        pass
     response = HttpResponse(pdf_bytes, content_type="application/pdf")
     response["Content-Disposition"] = f'attachment; filename="{proforma.number}.pdf"'
     return response
@@ -461,20 +537,33 @@ def _drawer_list(
                 form = form_class(instance=instance)
                 form.add_error(None, exc)
                 editing = instance
+            except PermissionDenied as exc:
+                messages.error(request, str(exc))
+                return redirect(redirect_name)
             else:
                 return redirect(redirect_name)
         else:
             instance = get_object_or_404(model, pk=pk) if pk else None
             form = form_class(request.POST, instance=instance)
             if form.is_valid():
-                obj = form.save(commit=False)
-                if save_fn:
-                    save_fn(obj, request.user)
-                elif isinstance(obj, Item):
-                    services.save_item(obj, request.user)
+                try:
+                    obj = form.save(commit=False)
+                    if save_fn:
+                        save_fn(obj, request.user)
+                    elif isinstance(obj, Item):
+                        services.save_item(obj, request.user)
+                    else:
+                        services.save_audited(obj, request.user)
+                except IntegrityError:
+                    form.add_error(
+                        None,
+                        ValidationError(
+                            "A live record with this value already exists."
+                        ),
+                    )
+                    editing = instance
                 else:
-                    services.save_audited(obj, request.user)
-                return redirect(redirect_name)
+                    return redirect(redirect_name)
             editing = instance
     elif request.GET.get("id"):
         editing = get_object_or_404(model, pk=request.GET["id"])
@@ -764,6 +853,9 @@ def tubing_length_list(request):
                 form = TubingLengthForm(instance=instance)
                 form.add_error(None, exc)
                 editing = instance
+            except PermissionDenied as exc:
+                messages.error(request, str(exc))
+                return redirect("tubing_length_list")
             else:
                 return redirect("tubing_length_list")
         else:

@@ -12,7 +12,7 @@ Audit defaults: `change_logs` (field-level), `activity_logs` (actions). Per-enti
 
 `created_by` / `updated_by` may be null for `actor_type = system`. The LLM/CLI path is not anonymous: the command takes a **mandatory user**; that user is `created_by` and `actor_type = user`.
 
-Draft proformas may be edited. **Issued** proformas are frozen in place: no value updates on that row. **Change** creates a new draft copy and links the old issued row via `superseded_by` / `replaces` (see `proformas`). `cancelled` retires a locked one without unlocking.
+Draft proformas may be edited. **Issued** proformas are frozen in place: no value updates on that row. **Change** creates a new draft copy and links the old issued row via `superseded_by` / `replaces` (see `proformas`). **Accepted** and **rejected** are outcomes on an issued row (`accepted_at` / `rejected_at`), not extra document statuses. Soft-delete hides mistakes from live lists.
 
 At **issue**, snapshot client, site, and catalog display fields onto the proforma and lines so issued PDFs do not change if live rows are renamed or repriced. FKs remain for navigation; PDF and locked values read the snapshots.
 
@@ -53,7 +53,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
   - `role` — enum `staff` | `admin`, required
   - `is_active` — boolean, required
 - Uniqueness: live `email`
-- Notes: maps to existing `accounts.User` (email login). Admin-provisioned; no public signup. Clients are not users. Demo manager (`staff`) may create and edit clients, sites, catalog (families, sub-families, manufacturers, items, VAT rates, sales prices, tubing lengths), parameters, and proformas, and may issue/cancel; only `admin` may soft-delete clients, sites, and catalog rows. Parameters have no delete.
+- Notes: maps to existing `accounts.User` (email login). Admin-provisioned; no public signup. Clients are not users. Demo manager (`staff`) may create and edit clients, sites, catalog (families, sub-families, manufacturers, items, VAT rates, sales prices, tubing lengths), parameters, and proformas, and may issue / mark accepted or rejected; only `admin` may soft-delete clients, sites, and catalog rows. Parameters have no delete.
 - Extra history table: no
 - Extra activity table: no
 
@@ -277,8 +277,9 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 - Fields (plus always-on):
   - `site` — fk → `sites`, required (client is that site’s client)
   - `number` — text, required; format `PF-YYYY-NNNN` (`YYYY` = create year, `NNNN` = 4-digit per-year sequence); assigned on create
-  - `status` — enum `draft` | `issued` | `cancelled`, required
-  - `accepted_at` — datetime, optional; null = not accepted yet. Set only on `issued` rows when staff mark that the quote went through (client accepted and/or install done). Cleared when staff unmark or when the proforma is cancelled. Not a money field; freeze rules unchanged.
+  - `status` — enum `draft` | `issued`, required
+  - `accepted_at` — datetime, optional; null = not accepted yet. Set only on `issued` rows when staff mark that the quote went through (client accepted and/or install done). Cleared when staff unmark. Mutually exclusive with `rejected_at`: staff must clear one before marking the other. Not a money field; freeze rules unchanged.
+  - `rejected_at` — datetime, optional; null = not rejected yet. Set only on `issued` rows when staff mark that the client declined (or the deal died). Cleared when staff unmark. Mutually exclusive with `accepted_at`. Not a money field; freeze rules unchanged. Blocks **Change**, same as accepted.
   - `superseded_by` — fk → `proformas`, optional; set on an **issued** row when staff **Change** it — points to the new draft that replaces it. Null = still the active issued version for that revision chain.
   - `replaces` — fk → `proformas`, optional; set on a **draft** created by **Change** — points back to the source issued row. Null on normal new drafts.
   - `upfront_discount_percent` — number, required (copied from parameters on create; overridable while draft)
@@ -312,9 +313,9 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
   - Only `draft` is editable. Explicit **issue** snapshots totals, client/site display fields, and locks. PDF is for issued documents. Draft preview PDF (if added later) must not lock.
   - Upfront discount applies to **equipment line totals only**, not tubing, not extra labour.
   - `extra_labour` is on the header, not on lines.
-  - `cancelled` retires a locked proforma. Do not unlock. Cancelling clears `accepted_at`. Soft-delete still hides mistakes from live lists.
-  - `accepted_at` is separate from `status`: an issued proforma may stay `issued` with or without a mark; later reporting can use `accepted_at IS NOT NULL` and group by that timestamp. Exclude superseded issued rows from active stats (`superseded_by` is null).
-  - **Change** (issued, not accepted, not superseded): copy to new draft on same site; set `replaces` on draft and `superseded_by` on source; source stays `issued` with frozen snapshots/PDF.
+  - Soft-delete still hides mistakes from live lists.
+  - `accepted_at` and `rejected_at` are separate from `status`: an issued proforma stays `issued` with or without a mark. Later reporting can use `accepted_at IS NOT NULL` / `rejected_at IS NOT NULL` and group by those timestamps. Exclude superseded issued rows from active stats (`superseded_by` is null).
+  - **Change** (issued, not accepted, not rejected, not superseded): copy to new draft on same site; set `replaces` on draft and `superseded_by` on source; source stays `issued` with frozen snapshots/PDF.
   - Totals at issue:
     - `equipment_subtotal` = sum over lines of `quantity × unit_price`
     - `tubing_total` = sum over lines of `quantity × tubing_amount`

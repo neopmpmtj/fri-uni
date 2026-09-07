@@ -20,14 +20,23 @@ def test_seed_demo_creates_users_clients_and_quotes():
     assert not manager.can_delete
     assert User.objects.filter(email=DEMO_ADMIN_EMAIL).count() == 1
     assert Client.objects.count() == 3
-    assert Site.objects.count() == 8
-    assert Proforma.objects.filter(status=Proforma.Status.ISSUED).count() == 2
+    assert Site.objects.count() == 9
+    assert Proforma.objects.filter(status=Proforma.Status.ISSUED).count() == 4
     assert Proforma.objects.filter(status=Proforma.Status.DRAFT).count() == 3
-    assert Proforma.objects.filter(status=Proforma.Status.CANCELLED).count() == 1
     assert Proforma.objects.filter(accepted_at__isnull=False).count() == 1
+    assert Proforma.objects.filter(rejected_at__isnull=False).count() == 1
     assert Proforma.objects.filter(superseded_by__isnull=False).count() == 1
     assert Proforma.objects.filter(replaces__isnull=False).count() == 1
-    assert Proforma.objects.count() == 6
+    assert (
+        Proforma.objects.filter(
+            status=Proforma.Status.ISSUED,
+            accepted_at__isnull=True,
+            rejected_at__isnull=True,
+            superseded_by__isnull=True,
+        ).count()
+        == 1
+    )
+    assert Proforma.objects.count() == 7
 
 
 def test_manager_cannot_delete_client(client):
@@ -38,7 +47,9 @@ def test_manager_cannot_delete_client(client):
     response = client.post(
         reverse("client_list"), {"id": str(org.pk), "action": "delete"}
     )
-    assert response.status_code == 403
+    assert response.status_code == 302
+    follow = client.get(response.url)
+    assert b"Only admin can delete" in follow.content
     assert Client.objects.filter(pk=org.pk).exists()
     page = client.get(reverse("client_list"), {"id": str(org.pk)})
     assert page.status_code == 200
@@ -93,7 +104,9 @@ def test_manager_cannot_delete_site(client):
     response = client.post(
         reverse("site_list"), {"id": str(site.pk), "action": "delete"}
     )
-    assert response.status_code == 403
+    assert response.status_code == 302
+    follow = client.get(response.url)
+    assert b"Only admin can delete" in follow.content
     assert Site.objects.filter(pk=site.pk).exists()
     page = client.get(reverse("site_list"), {"id": str(site.pk)})
     assert page.status_code == 200

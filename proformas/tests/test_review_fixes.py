@@ -128,8 +128,9 @@ def test_issued_detail_uses_snapshot_after_rename(client, staff_user, site, indo
     assert b"House 1" in detail.content
     assert b"Renamed Ltd" not in detail.content
     assert b"New alias" not in detail.content
-    assert b"Acme" in listing.content
-    assert b"Renamed Ltd" not in listing.content
+    table = listing.content.split(b'<table class="grid">', 1)[1].split(b"</table>", 1)[0]
+    assert b"Acme" in table
+    assert b"Renamed Ltd" not in table
 
 
 @pytest.mark.integration

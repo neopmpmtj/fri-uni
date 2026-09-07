@@ -7,10 +7,11 @@ from proformas.models import ActivityLog, Proforma
 from proformas.services import (
     accept_proforma,
     add_line,
-    cancel_proforma,
     create_draft,
     issue_proforma,
+    reject_proforma,
     unaccept_proforma,
+    unreject_proforma,
     update_draft,
 )
 
@@ -69,11 +70,12 @@ def test_issued_money_update_rejected(issued, staff_user):
         update_draft(issued, staff_user, extra_labour=Decimal("99.00"))
 
 
-def test_cancel_does_not_return_to_draft(issued, staff_user):
-    cancel_proforma(issued, staff_user)
+def test_reject_does_not_unlock(issued, staff_user):
+    reject_proforma(issued, staff_user)
     issued.refresh_from_db()
-    assert issued.status == Proforma.Status.CANCELLED
-    assert ActivityLog.objects.filter(action="cancel_proforma").exists()
+    assert issued.status == Proforma.Status.ISSUED
+    assert issued.rejected_at is not None
+    assert ActivityLog.objects.filter(action="reject_proforma").exists()
     with pytest.raises(ValidationError):
         update_draft(issued, staff_user, observations="nope")
 
@@ -107,9 +109,42 @@ def test_accept_rejected_when_already_accepted(issued, staff_user):
         accept_proforma(issued, staff_user)
 
 
-def test_cancel_clears_accepted_at(issued, staff_user):
-    accept_proforma(issued, staff_user)
-    cancel_proforma(issued, staff_user)
+def test_reject_sets_rejected_at(issued, staff_user):
+    reject_proforma(issued, staff_user)
     issued.refresh_from_db()
-    assert issued.status == Proforma.Status.CANCELLED
-    assert issued.accepted_at is None
+    assert issued.rejected_at is not None
+    assert issued.status == Proforma.Status.ISSUED
+    assert ActivityLog.objects.filter(action="reject_proforma").exists()
+
+
+def test_unreject_clears_rejected_at(issued, staff_user):
+    reject_proforma(issued, staff_user)
+    unreject_proforma(issued, staff_user)
+    issued.refresh_from_db()
+    assert issued.rejected_at is None
+    assert ActivityLog.objects.filter(action="unreject_proforma").exists()
+
+
+def test_reject_only_on_issued(staff_user, site, indoor):
+    draft = create_draft(site, staff_user)
+    add_line(draft, indoor, staff_user, quantity=1)
+    with pytest.raises(ValidationError, match="issued"):
+        reject_proforma(draft, staff_user)
+
+
+def test_reject_refused_when_accepted(issued, staff_user):
+    accept_proforma(issued, staff_user)
+    with pytest.raises(ValidationError, match="Accepted"):
+        reject_proforma(issued, staff_user)
+
+
+def test_accept_refused_when_rejected(issued, staff_user):
+    reject_proforma(issued, staff_user)
+    with pytest.raises(ValidationError, match="Rejected"):
+        accept_proforma(issued, staff_user)
+
+
+def test_reject_rejected_when_already_rejected(issued, staff_user):
+    reject_proforma(issued, staff_user)
+    with pytest.raises(ValidationError, match="already"):
+        reject_proforma(issued, staff_user)

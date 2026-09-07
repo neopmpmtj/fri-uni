@@ -8,11 +8,11 @@ from proformas.models import ActivityLog, Proforma
 from proformas.services import (
     accept_proforma,
     add_line,
-    cancel_proforma,
     change_proforma,
     create_draft,
     is_active_for_stats,
     issue_proforma,
+    reject_proforma,
 )
 
 pytestmark = pytest.mark.django_db
@@ -51,9 +51,9 @@ def test_change_rejected_on_draft(staff_user, site, indoor):
 
 
 @pytest.mark.unit
-def test_change_rejected_on_cancelled(issued, staff_user):
-    cancel_proforma(issued, staff_user)
-    with pytest.raises(ValidationError, match="issued"):
+def test_change_rejected_when_rejected(issued, staff_user):
+    reject_proforma(issued, staff_user)
+    with pytest.raises(ValidationError, match="Rejected"):
         change_proforma(issued, staff_user)
 
 
@@ -117,3 +117,6 @@ def test_list_edit_for_draft_and_no_change_when_accepted(
     assert listing.status_code == 200
     assert b"Edit" in listing.content
     assert b'<button type="submit" class="btn-link" data-i18n="change">Change</button>' not in listing.content
+    assert b"Clear accepted" in listing.content
+    assert b"Mark accepted" not in listing.content
+    assert b"Mark rejected" not in listing.content

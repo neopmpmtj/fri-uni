@@ -18,7 +18,7 @@ from proformas.models import (
 from proformas.services import (
     add_line,
     accept_proforma,
-    cancel_proforma,
+    reject_proforma,
     change_proforma,
     create_draft,
     issue_proforma,
@@ -188,6 +188,14 @@ DEMO_CLIENTS = (
                 "postal_code": "4100-100",
                 "city": "Porto",
                 "notes": "Wet area, floor-standing unit.",
+            },
+            {
+                "alias_1": "Receção",
+                "alias_2": "Lobby",
+                "street": "Avenida do Brasil 200",
+                "postal_code": "4100-100",
+                "city": "Porto",
+                "notes": "Issued quote awaiting client decision — use to test Change.",
             },
         ),
     },
@@ -458,7 +466,7 @@ def _add_lines(proforma, actor, lines):
         )
 
 
-def _ensure_proforma(site, actor, *, status, lines, accepted=False, **draft_kwargs):
+def _ensure_proforma(site, actor, *, status, lines, accepted=False, rejected=False, **draft_kwargs):
     if site.proformas.exists():
         proforma = site.proformas.order_by("pk").first()
         if (
@@ -467,15 +475,21 @@ def _ensure_proforma(site, actor, *, status, lines, accepted=False, **draft_kwar
             and proforma.accepted_at is None
         ):
             accept_proforma(proforma, actor)
+        if (
+            rejected
+            and proforma.status == Proforma.Status.ISSUED
+            and proforma.rejected_at is None
+        ):
+            reject_proforma(proforma, actor)
         return proforma
     proforma = create_draft(site, actor, **draft_kwargs)
     _add_lines(proforma, actor, lines)
-    if status in (Proforma.Status.ISSUED, Proforma.Status.CANCELLED):
+    if status == Proforma.Status.ISSUED:
         issue_proforma(proforma, actor)
-    if status == Proforma.Status.CANCELLED:
-        cancel_proforma(proforma, actor)
     if accepted and proforma.status == Proforma.Status.ISSUED:
         accept_proforma(proforma, actor)
+    if rejected and proforma.status == Proforma.Status.ISSUED:
+        reject_proforma(proforma, actor)
     return proforma
 
 
@@ -555,8 +569,9 @@ def seed_demo(*, password=DEMO_PASSWORD, reset_password=False):
     _ensure_proforma(
         sites["Ala Norte"],
         manager,
-        status=Proforma.Status.CANCELLED,
-        observations="Superseded by a new quote. Do not use.",
+        status=Proforma.Status.ISSUED,
+        rejected=True,
+        observations="Client declined this quote.",
         lines=(
             {"brand": "Daikin", "style": "Comfora", "kind": indoor, "btu": 9000},
             {"brand": "Daikin", "style": "Comfora", "kind": outdoor, "btu": 9000},
@@ -573,6 +588,16 @@ def seed_demo(*, password=DEMO_PASSWORD, reset_password=False):
             {"brand": "Daikin", "style": "Perfera Floor", "kind": outdoor, "btu": 12000},
         ),
     )
+    _ensure_proforma(
+        sites["Receção"],
+        manager,
+        status=Proforma.Status.ISSUED,
+        observations="Lobby Sensira pair — issued, not accepted (test Change button).",
+        lines=(
+            {"brand": "Daikin", "style": "Sensira", "kind": indoor, "btu": 12000},
+            {"brand": "Daikin", "style": "Sensira", "kind": outdoor, "btu": 12000},
+        ),
+    )
     cascais = (
         sites["Moradia Cascais"]
         .proformas.filter(
@@ -583,5 +608,8 @@ def seed_demo(*, password=DEMO_PASSWORD, reset_password=False):
         .first()
     )
     if cascais is not None:
-        change_proforma(cascais, manager)
+        try:
+            change_proforma(cascais, manager)
+        except ValidationError:
+            pass
     return {"admin": admin, "manager": manager}

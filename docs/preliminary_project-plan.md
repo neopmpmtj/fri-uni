@@ -358,3 +358,47 @@ None.
 
 - **Change** on issued (not accepted, not superseded): new draft on same site; `replaces` on draft, `superseded_by` on source; source stays issued with frozen PDF.
 - List **Actions**: Edit (draft), Change (issued eligible), none (cancelled / accepted / superseded).
+
+## Update 2026-09-07 — rejected overlay (no cancelled status)
+
+### What changed
+
+- Dropped `cancelled` as a document status. Life is `draft` → `issued` only; money still frozen after issue.
+- **Rejected** is `proformas.rejected_at` (datetime, null = not rejected), sibling to `accepted_at`. Staff mark an issued quote when the client declined; they can clear the mark. Mutually exclusive with accepted (clear one before marking the other).
+- **Change** is blocked when accepted or rejected (or already superseded).
+- Demo Ala Norte quote is issued + rejected. Fresh DB: migrate then `seed_demo`.
+
+### Apps added/removed
+
+None.
+
+### Decisions
+
+- Outcomes (accepted / rejected) are not filter statuses. List filter is `draft` / `issued`; pills distinguish outcomes.
+- No auto-clear: switching accepted ↔ rejected requires clearing first.
+
+### Open questions still open
+
+None.
+
+## Update 2026-09-07 — list Accept / Reject / Clear
+
+### What changed
+
+- Proforma **list** Actions now mark outcomes without opening the issued work page (so staff do not have to **Change**, which supersedes immediately).
+- `issued` (not accepted, not rejected, not superseded): **Change** on the left; **Mark accepted** / **Mark rejected** on the right.
+- `issued` + accepted or `issued` + rejected: only **Clear accepted** or **Clear rejected**.
+- Draft stays **Edit**. Superseded stays no action. Detail page actions are unchanged.
+
+### Apps added/removed
+
+None.
+
+### Decisions
+
+- Accept/reject from the list uses the same services and confirm dialog as the issued work page.
+- Clear from the list does not use a confirm dialog (same as detail).
+
+### Open questions still open
+
+None.

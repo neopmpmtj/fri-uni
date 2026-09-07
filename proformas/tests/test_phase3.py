@@ -462,7 +462,9 @@ def test_staff_cannot_delete_vat_rate(client, staff_user, indoor):
         reverse("vat_rate_list"),
         {"id": str(indoor.vat_rate_id), "action": "delete"},
     )
-    assert response.status_code == 403
+    assert response.status_code == 302
+    follow = client.get(response.url)
+    assert b"Only admin can delete" in follow.content
     assert VatRate.objects.filter(pk=indoor.vat_rate_id).exists()
 
 

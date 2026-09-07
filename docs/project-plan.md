@@ -381,6 +381,9 @@ Do not implement in these phases:
 
 - [x] Proforma `accepted_at`: mark issued quotes as accepted; cancel clears mark; list/detail UI (completed 2026-09-07)
 - [x] Proforma list Edit/Change actions + supersede links (`superseded_by` / `replaces`) (completed 2026-09-07)
+- [x] Drop `cancelled` status; `rejected_at` overlay on issued (sibling to `accepted_at`); Change blocked when rejected (completed 2026-09-07)
+- [x] Crash/freeze review + H/M/L remediations from [`error-dead-ends-2026-09-07-1238.md`](reviews/error-dead-ends-2026-09-07-1238.md) (completed 2026-09-07)
+- [x] Proforma list Accept / Reject / Clear so staff need not Change an issued quote to mark outcome (completed 2026-09-07)
 
 ## Tests policy
 
