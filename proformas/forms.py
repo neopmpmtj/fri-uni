@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from .models import (
     Brand,
     Client,
+    ContactPosition,
     Country,
     Family,
     Item,
@@ -68,6 +69,7 @@ class ClientForm(forms.ModelForm):
         configure_nine_digit_form_field(self.fields["phone"], required=True)
         self.fields["email"].required = True
         self.fields["contact_name"].required = False
+        self.fields["contact_position"].queryset = ContactPosition.objects.order_by("name")
         self.fields["contact_position"].required = False
 
     def clean(self):
@@ -160,6 +162,7 @@ class SiteForm(forms.ModelForm):
         configure_nine_digit_form_field(self.fields["phone"], required=True)
         self.fields["email"].required = True
         self.fields["contact_name"].required = False
+        self.fields["contact_position"].queryset = ContactPosition.objects.order_by("name")
         self.fields["contact_position"].required = False
 
     def clean(self):
@@ -287,6 +290,21 @@ class ProformaLineForm(forms.ModelForm):
         if cleaned.get("extra_tubing") and not cleaned.get("tubing_length"):
             raise ValidationError("Tubing length is required when extra tubing is needed.")
         return cleaned
+
+
+class ContactPositionForm(forms.ModelForm):
+    class Meta:
+        model = ContactPosition
+        fields = ("name",)
+
+    def clean_name(self):
+        name = self.cleaned_data["name"].strip()
+        qs = ContactPosition.objects.filter(name__iexact=name)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError("A live position with this name already exists.")
+        return name
 
 
 class FamilyForm(forms.ModelForm):

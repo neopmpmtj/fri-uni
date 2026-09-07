@@ -282,6 +282,7 @@ def test_staff_can_open_catalog_pages(client, staff_user):
         "power_list",
         "parameter_list",
         "tubing_length_list",
+        "contact_position_list",
     ):
         response = client.get(reverse(name))
         assert response.status_code == 200
@@ -292,6 +293,7 @@ def test_staff_can_open_catalog_pages(client, staff_user):
     assert b'data-i18n="powers"' in dashboard.content
     assert b'data-i18n="parameters"' in dashboard.content
     assert b'data-i18n="tubingLengths"' in dashboard.content
+    assert b'data-i18n="contactPositions"' in dashboard.content
     assert b"catalogAdmin" not in dashboard.content
 
 

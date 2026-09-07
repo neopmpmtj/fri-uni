@@ -6,6 +6,7 @@ from accounts.models import User
 from proformas.models import (
     Brand,
     Client,
+    ContactPosition,
     Family,
     Item,
     Parameter,
@@ -15,6 +16,14 @@ from proformas.models import (
     TubingLength,
     VatRate,
 )
+
+
+@pytest.fixture
+def contact_positions(db):
+    positions = {}
+    for name in ("CEO", "CFO", "Manager", "Director", "Other"):
+        positions[name], _ = ContactPosition.objects.get_or_create(name=name)
+    return positions
 
 
 @pytest.fixture

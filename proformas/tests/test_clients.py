@@ -219,7 +219,7 @@ def test_minimal_client_create(client, staff_user):
 
 @pytest.mark.integration
 @pytest.mark.django_db
-def test_client_contact_fields_save_when_provided(client, staff_user):
+def test_client_contact_fields_save_when_provided(client, staff_user, contact_positions):
     client.force_login(staff_user)
     response = client.post(
         reverse("client_list"),
@@ -234,13 +234,13 @@ def test_client_contact_fields_save_when_provided(client, staff_user):
             "phone": "912345678",
             "email": "contact@example.com",
             "contact_name": "Maria Silva",
-            "contact_position": "ceo",
+            "contact_position": contact_positions["CEO"].pk,
         },
     )
     assert response.status_code == 302
     org = Client.objects.get(name="Contact Co")
     assert org.contact_name == "Maria Silva"
-    assert org.contact_position == "ceo"
+    assert org.contact_position_id == contact_positions["CEO"].pk
 
 
 @pytest.mark.integration
@@ -385,7 +385,7 @@ def test_site_post_without_postal_code_rejected(client, staff_user):
 
 @pytest.mark.integration
 @pytest.mark.django_db
-def test_create_site_with_phone_and_email(client, staff_user):
+def test_create_site_with_phone_and_email(client, staff_user, contact_positions):
     org = Client.objects.create(**client_kwargs())
     client.force_login(staff_user)
     response = client.post(
@@ -397,7 +397,7 @@ def test_create_site_with_phone_and_email(client, staff_user):
                 phone="934567890",
                 email="obra-contact@example.com",
                 contact_name="Ana Costa",
-                contact_position="manager",
+                contact_position=contact_positions["Manager"].pk,
             ),
         },
     )
@@ -406,7 +406,7 @@ def test_create_site_with_phone_and_email(client, staff_user):
     assert site.phone == "934567890"
     assert site.email == "obra-contact@example.com"
     assert site.contact_name == "Ana Costa"
-    assert site.contact_position == "manager"
+    assert site.contact_position_id == contact_positions["Manager"].pk
 
 
 @pytest.mark.integration

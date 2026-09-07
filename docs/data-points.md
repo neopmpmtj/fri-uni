@@ -102,6 +102,16 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
 - Uniqueness: `code`
 - Notes: UI currently defaults phone country to Portugal and disables the selector; validation uses the row’s `phone_national_digits`.
 
+### contact_positions
+
+- Purpose: contact role / job title for client and site contacts (UI label: position / cargo)
+- Written by (apps): staff web app (setup page)
+- Fields (plus always-on):
+  - `name` — text, required (e.g. CEO, Manager)
+- Uniqueness: live `name` (case-insensitive)
+- Seed set (initial): CEO, CFO, Manager, Director, Other
+- Notes: optional on clients and sites; referenced by fk from `clients.contact_position` and `sites.contact_position`
+
 ### clients
 
 - Purpose: customer for invoicing (private person or company)
@@ -113,7 +123,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
   - `phone` — text, required (national digits only, 9 for Portugal; no `+` prefix stored)
   - `email` — text, required
   - `contact_name` — text, optional
-  - `contact_position` — enum `ceo` | `cfo` | `manager` | `director` | `other`, optional
+  - `contact_position` — fk → `contact_positions`, optional
   - `country_code` — text, required (billing address country; default `PT`)
   - `tax_number` — text, optional (Portuguese NIF, 9 digits when set, live unique among non-blank)
   - `street` — text, optional (billing / legal address)
@@ -144,7 +154,7 @@ Same validation and snapshot rules as the web app. Intended for LLM agent invoca
   - `phone` — text, required (national digits only, 9 for Portugal)
   - `email` — text, required
   - `contact_name` — text, optional
-  - `contact_position` — enum `ceo` | `cfo` | `manager` | `director` | `other`, optional
+  - `contact_position` — fk → `contact_positions`, optional
   - `notes` — text, optional
 - Relationships: belongs to one `client`; has many `proformas`
 - Uniqueness: at most one live `is_headquarters` per client

@@ -436,6 +436,15 @@ def delete_site(site, user):
     site.soft_delete(user)
 
 
+def delete_contact_position(contact_position, user):
+    require_delete_permission(user)
+    if Client.objects.filter(contact_position=contact_position).exists():
+        raise ValidationError("Cannot delete a position that is used by clients.")
+    if Site.objects.filter(contact_position=contact_position).exists():
+        raise ValidationError("Cannot delete a position that is used by sites.")
+    contact_position.soft_delete(user)
+
+
 def delete_family(family, user):
     require_delete_permission(user)
     family.soft_delete(user)

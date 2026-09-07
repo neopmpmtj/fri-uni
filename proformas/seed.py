@@ -4,6 +4,7 @@ from accounts.models import User
 from proformas.models import (
     Brand,
     Client,
+    ContactPosition,
     Family,
     Item,
     Parameter,
@@ -102,6 +103,8 @@ DEMO_ADMIN_EMAIL = "proforma-admin@fribila.dev"
 DEMO_MANAGER_EMAIL = "proforma-manager@fribila.dev"
 DEMO_PASSWORD = "fribila-demo"
 
+CONTACT_POSITIONS = ("CEO", "CFO", "Manager", "Director", "Other")
+
 DEMO_CLIENTS = (
     {
         "kind": "company",
@@ -114,7 +117,7 @@ DEMO_CLIENTS = (
         "phone": "210001100",
         "email": "obras@atlantico.example",
         "contact_name": "João Pereira",
-        "contact_position": "ceo",
+        "contact_position": "CEO",
         "sites": (
             {
                 "alias_1": "Moradia Cascais",
@@ -251,6 +254,19 @@ def _seed_capacity_items(
         )
 
 
+def _seed_contact_positions():
+    for name in CONTACT_POSITIONS:
+        _live_get_or_create(ContactPosition, name=name)
+
+
+def _resolve_contact_position(value):
+    if not value:
+        return None
+    if isinstance(value, ContactPosition):
+        return value
+    return ContactPosition.objects.filter(name__iexact=value).first()
+
+
 def seed_catalog():
     vat23 = None
     for code, label, rate, is_default in VAT_RATES:
@@ -319,6 +335,7 @@ def seed_catalog():
         )
     for key, value in PARAMETERS:
         _live_get_or_create(Parameter, defaults={"value": value}, key=key)
+    _seed_contact_positions()
 
 
 def _ensure_user(email, password, *, role, is_superuser=False, reset_password=False):
@@ -370,7 +387,9 @@ def _seed_clients_and_sites(actor):
             "phone": spec.get("phone", ""),
             "email": spec.get("email", ""),
             "contact_name": spec.get("contact_name", ""),
-            "contact_position": spec.get("contact_position", ""),
+            "contact_position": _resolve_contact_position(
+                spec.get("contact_position", "")
+            ),
             "created_by": actor,
             "updated_by": actor,
         }
@@ -408,7 +427,9 @@ def _seed_clients_and_sites(actor):
                 "phone": site_spec.get("phone", client.phone),
                 "email": site_spec.get("email", client.email),
                 "contact_name": site_spec.get("contact_name", ""),
-                "contact_position": site_spec.get("contact_position", ""),
+                "contact_position": _resolve_contact_position(
+                    site_spec.get("contact_position", client.contact_position)
+                ),
                 "notes": site_spec.get("notes", ""),
                 "created_by": actor,
                 "updated_by": actor,

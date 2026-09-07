@@ -11,6 +11,7 @@ from . import services
 from .forms import (
     BrandForm,
     ClientForm,
+    ContactPositionForm,
     FamilyForm,
     ItemForm,
     ItemPriceForm,
@@ -27,6 +28,7 @@ from .forms import (
 from .models import (
     Brand,
     Client,
+    ContactPosition,
     Family,
     Item,
     Parameter,
@@ -459,6 +461,25 @@ def _drawer_list(
     if extra_context:
         context.update(extra_context)
     return render(request, template, context)
+
+
+@login_required
+def contact_position_list(request):
+    q = request.GET.get("q", "").strip()
+    rows = ContactPosition.objects.order_by("name")
+    if q:
+        rows = rows.filter(name__icontains=q)
+    return _drawer_list(
+        request,
+        model=ContactPosition,
+        form_class=ContactPositionForm,
+        template="proformas/contact_position_list.html",
+        redirect_name="contact_position_list",
+        delete_fn=services.delete_contact_position,
+        nav_active="",
+        page_title="Positions",
+        extra_context={"contact_positions": rows, "q": q},
+    )
 
 
 @login_required

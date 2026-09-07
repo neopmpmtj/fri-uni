@@ -86,12 +86,23 @@ class Country(models.Model):
         return self.name
 
 
-class ContactPosition(models.TextChoices):
-    CEO = "ceo", "CEO"
-    CFO = "cfo", "CFO"
-    MANAGER = "manager", "Manager"
-    DIRECTOR = "director", "Director"
-    OTHER = "other", "Other"
+class ContactPosition(AuditedModel):
+    """Contact role / job title for client and site contacts."""
+
+    name = models.CharField(max_length=64)
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            UniqueConstraint(
+                Lower("name"),
+                condition=Q(deleted_at__isnull=True),
+                name="uniq_live_contact_position_name_ci",
+            ),
+        ]
+
+    def __str__(self):
+        return self.name
 
 
 class Client(AuditedModel):
@@ -115,8 +126,12 @@ class Client(AuditedModel):
     phone = models.CharField(max_length=9)
     email = models.EmailField()
     contact_name = models.CharField(max_length=255, blank=True)
-    contact_position = models.CharField(
-        max_length=16, choices=ContactPosition.choices, blank=True
+    contact_position = models.ForeignKey(
+        ContactPosition,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
     )
 
     class Meta:
@@ -156,8 +171,12 @@ class Site(AuditedModel):
     phone = models.CharField(max_length=9)
     email = models.EmailField()
     contact_name = models.CharField(max_length=255, blank=True)
-    contact_position = models.CharField(
-        max_length=16, choices=ContactPosition.choices, blank=True
+    contact_position = models.ForeignKey(
+        ContactPosition,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
     )
     notes = models.TextField(blank=True)
 
