@@ -23,7 +23,7 @@ Uncommitted implementation is no longer the story: work is on feature branches w
 - Domain app named `proformas` (not `office`)
 - `seed_demo`: admin + manager users, three clients, five sites, five proformas (issued / draft / cancelled). Manager cannot soft-delete.
 - pytest: 30 passed
-- First code review saved at [`docs/reviews/code-review-2026-09-07-0617.md`](reviews/code-review-2026-09-07-0617.md) (test inventory + bugs; Bugbot comparison pending merge into that file)
+- First code review saved at [`docs/reviews/code-review-2026-09-07-0617.md`](reviews/code-review-2026-09-07-0617.md) (test inventory, bugs, Bugbot comparison merged)
 
 ## Not done
 
