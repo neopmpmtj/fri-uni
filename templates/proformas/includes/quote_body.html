@@ -11,9 +11,10 @@
     </section>
     <section>
         <h2>{{ labels.site }}</h2>
-        <p>{{ proforma.site_alias_1 }}{% if proforma.site_alias_2 %}, {{ proforma.site_alias_2 }}{% endif %}</p>
+        <p>{{ proforma.site_alias_1 }}{% if proforma.site_alias_2 %}, {{ proforma.site_alias_2 }}{% endif %}{% if proforma.site_alias_3 %}, {{ proforma.site_alias_3 }}{% endif %}{% if proforma.site_alias_4 %}, {{ proforma.site_alias_4 }}{% endif %}</p>
         {% if proforma.site_street %}<p>{{ proforma.site_street }}</p>{% endif %}
         <p>{{ proforma.site_postal_code }} {{ proforma.site_city }}</p>
+        {% if proforma.site_notes %}<p>{{ proforma.site_notes }}</p>{% endif %}
     </section>
     <table class="grid">
         <thead>
@@ -28,7 +29,7 @@
         <tbody>
             {% for line in lines %}
             <tr>
-                <td>{{ line.brand_name }} {{ line.style_name }} {% if line.kind == "indoor" %}{{ labels.kindIndoor }}{% else %}{{ labels.kindOutdoor }}{% endif %} {{ line.btu }}</td>
+                <td>{{ line.brand_name }} {{ line.style_name }} {% if line.kind == "indoor" %}{{ labels.kindIndoor }}{% elif line.kind == "outdoor" %}{{ labels.kindOutdoor }}{% else %}{{ line.kind }}{% endif %} {{ line.btu }}</td>
                 <td>{{ line.quantity }}</td>
                 <td>{{ line.unit_price }}</td>
                 <td>{% if line.extra_tubing %}{{ line.tubing_length_value }} m{% else %}—{% endif %}</td>

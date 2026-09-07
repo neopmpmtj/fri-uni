@@ -114,6 +114,12 @@ textarea {
     color: #9b1c1c;
 }
 
+.messages {
+    list-style: none;
+    margin: 0 0 1rem;
+    padding: 0;
+}
+
 /* Login */
 .login-body {
     display: flex;

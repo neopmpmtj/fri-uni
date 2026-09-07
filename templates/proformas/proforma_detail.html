@@ -14,17 +14,20 @@
 {% endblock %}
 
 {% block content %}
-<p class="muted">{{ proforma.site.client.name }} / {{ proforma.site.alias_1 }} — {{ proforma.get_status_display }}</p>
+<p class="muted">{% if is_draft %}{{ proforma.site.client.name }} / {{ proforma.site.alias_1 }}{% else %}{{ proforma.client_name }} / {{ proforma.site_alias_1 }}{% endif %} — {{ proforma.get_status_display }}</p>
 
 <form method="post" class="header-fields">
     {% csrf_token %}
+    {{ header_form.non_field_errors }}
     <label>
         <span data-i18n="discountPercent">Upfront discount %</span>
         {{ header_form.upfront_discount_percent }}
+        {{ header_form.upfront_discount_percent.errors }}
     </label>
     <label>
         <span data-i18n="extraLabour">Extra labour</span>
         {{ header_form.extra_labour }}
+        {{ header_form.extra_labour.errors }}
     </label>
     <label style="grid-column:1 / -1;">
         <span data-i18n="observations">Observations</span>
@@ -33,7 +36,7 @@
 {% if is_draft %}
     <div>
         <button type="submit" name="action" value="save_header" class="btn primary" data-i18n="save">Save</button>
-        <button type="submit" name="action" value="issue" class="btn primary" form="issue-form" data-i18n="issue">Issue</button>
+        <button type="submit" name="action" value="issue" class="btn primary" data-i18n="issue">Issue</button>
     </div>
     {% endif %}
     {% if is_issued %}
@@ -93,7 +96,7 @@
                     {% endif %}
                 </td>
                 <td>{{ line.quantity }}</td>
-                <td>{% if line.extra_tubing %}{{ line.tubing_length }}{% else %}—{% endif %}</td>
+                <td>{% if line.extra_tubing %}{% if is_draft %}{{ line.tubing_length }}{% else %}{{ line.tubing_length_value }} m{% endif %}{% else %}—{% endif %}</td>
                 <td>{{ line.line_total }}</td>
                 <td>
                     {% if is_draft %}

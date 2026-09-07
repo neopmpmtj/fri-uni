@@ -36,3 +36,33 @@ def test_portuguese_quote_label(client, staff_user, site, indoor):
     client.cookies["fu-lang"] = "pt"
     response = client.get(reverse("proforma_quote", args=[proforma.pk]))
     assert "Totais" in response.content.decode()
+    pdf = client.get(reverse("proforma_pdf", args=[proforma.pk]))
+    assert pdf.status_code == 200
+    assert pdf["Content-Type"] == "application/pdf"
+    assert len(pdf.content) > 0
+    from django.template.loader import render_to_string
+    from proformas.quote_i18n import quote_labels
+
+    html = render_to_string(
+        "proformas/quote_pdf.html",
+        {
+            "proforma": proforma,
+            "lines": proforma.lines.all(),
+            "labels": quote_labels("pt"),
+            "company_name": "fri-uni",
+            "html_lang": "pt-PT",
+        },
+    )
+    assert "Totais" in html
+    assert 'lang="pt-PT"' in html
+
+
+def test_quote_includes_extra_site_snapshots(client, staff_user, site, indoor):
+    site.alias_3 = "Gate C"
+    site.notes = "Bring ladder"
+    site.save()
+    proforma = _issued(staff_user, site, indoor)
+    client.force_login(staff_user)
+    body = client.get(reverse("proforma_quote", args=[proforma.pk])).content.decode()
+    assert "Gate C" in body
+    assert "Bring ladder" in body

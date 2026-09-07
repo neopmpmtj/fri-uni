@@ -2,7 +2,7 @@
 
 Internal HVAC back office for creating **proforma invoices** — client quotes for equipment installation and cost, including an upfront-payment discount. Not an official finance document.
 
-> **Last updated:** 2026-09-07 06:17 WEST
+> **Last updated:** 2026-09-07 06:37 WEST
 
 ## What it does
 
@@ -37,6 +37,7 @@ Demo logins (password `fribila-demo`):
 | [`docs/front-end-project-plan.md`](docs/front-end-project-plan.md) | Staff UI chrome (dashboard, drawers, i18n) |
 | [`docs/data-points.md`](docs/data-points.md) | Conceptual tables and fields (source for models) |
 | [`docs/preliminary_project-plan.md`](docs/preliminary_project-plan.md) | Product scope, apps, decisions |
+| [`docs/reviews/`](docs/reviews/) | In-progress audits |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | VPS deploy notes |
 | [`AGENTS.md`](AGENTS.md) | Agent instructions |
 
@@ -48,4 +49,4 @@ Demo logins (password `fribila-demo`):
 
 ## Pick up from here
 
-Staff web MVP and CLI are implemented (`proformas`). For a clickable demo run `seed_demo` and log in as the manager. See [`docs/handoff.md`](docs/handoff.md). First code review: [`docs/reviews/code-review-2026-09-07-0617.md`](docs/reviews/code-review-2026-09-07-0617.md).
+Staff web MVP and CLI are implemented (`proformas`). For a clickable demo run `seed_demo` and log in as the manager. See [`docs/handoff.md`](docs/handoff.md). Code review and remediations: [`docs/reviews/code-review-2026-09-07-0617.md`](docs/reviews/code-review-2026-09-07-0617.md).

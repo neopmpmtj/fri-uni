@@ -1,6 +1,8 @@
-from decimal import Decimal
+import re
+from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from .models import (
@@ -119,7 +121,27 @@ TWOPLACES = Decimal("0.01")
 
 
 def money(value):
-    return Decimal(str(value)).quantize(TWOPLACES)
+    try:
+        return Decimal(str(value)).quantize(TWOPLACES)
+    except (InvalidOperation, TypeError) as exc:
+        raise ValidationError("Enter a valid amount.") from exc
+
+
+def discount_percent_value(value):
+    try:
+        amount = Decimal(str(value))
+    except (InvalidOperation, TypeError) as exc:
+        raise ValidationError("Enter a valid discount percent.") from exc
+    if amount < 0 or amount > 100:
+        raise ValidationError("Discount percent must be between 0 and 100.")
+    return amount
+
+
+def labour_value(value):
+    amount = money(value or 0)
+    if amount < 0:
+        raise ValidationError("Extra labour cannot be negative.")
+    return amount
 
 
 def require_draft(proforma):
@@ -130,17 +152,23 @@ def require_draft(proforma):
 def next_proforma_number(year=None):
     year = year or timezone.now().year
     prefix = f"PF-{year}-"
-    existing = (
-        Proforma.objects.filter(number__startswith=prefix)
-        .order_by("-number")
-        .values_list("number", flat=True)
-        .first()
-    )
-    seq = int(existing.rsplit("-", 1)[-1]) + 1 if existing else 1
+    pattern = re.compile(rf"^PF-{year}-(\d+)$")
+    seqs = []
+    for number in Proforma.objects.filter(number__startswith=prefix).values_list(
+        "number", flat=True
+    ):
+        match = pattern.fullmatch(number)
+        if match:
+            seqs.append(int(match.group(1)))
+    seq = max(seqs) + 1 if seqs else 1
     return f"{prefix}{seq:04d}"
 
 
+NUMBER_ALLOCATION_ATTEMPTS = 5
+
+
 def recompute_draft_totals(proforma):
+    require_draft(proforma)
     lines = list(proforma.lines.all())
     equipment = sum((line.quantity * line.unit_price for line in lines), Decimal("0.00"))
     tubing = sum((line.quantity * line.tubing_amount for line in lines), Decimal("0.00"))
@@ -174,18 +202,34 @@ def create_draft(
 ):
     if discount_percent is None:
         discount_percent = get_parameter("default_upfront_discount_percent", "10")
-    proforma = Proforma(
-        site=site,
-        number=next_proforma_number(),
-        status=Proforma.Status.DRAFT,
-        upfront_discount_percent=Decimal(str(discount_percent)),
-        extra_labour=money(extra_labour or 0),
-        observations=observations or "",
-        created_by=user,
-        updated_by=user,
-    )
-    proforma.save()
-    return recompute_draft_totals(proforma)
+    discount = discount_percent_value(discount_percent)
+    labour = labour_value(extra_labour or 0)
+    last_error = None
+    for _ in range(NUMBER_ALLOCATION_ATTEMPTS):
+        try:
+            with transaction.atomic():
+                proforma = Proforma(
+                    site=site,
+                    number=next_proforma_number(),
+                    status=Proforma.Status.DRAFT,
+                    upfront_discount_percent=discount,
+                    extra_labour=labour,
+                    observations=observations or "",
+                    created_by=user,
+                    updated_by=user,
+                )
+                proforma.save()
+                recompute_draft_totals(proforma)
+                log_activity(
+                    action="create_proforma",
+                    object_type="proforma",
+                    object_id=proforma.pk,
+                    actor=user,
+                )
+                return proforma
+        except IntegrityError as exc:
+            last_error = exc
+    raise ValidationError("Could not allocate a unique proforma number.") from last_error
 
 
 def update_draft(
@@ -198,9 +242,11 @@ def update_draft(
 ):
     require_draft(proforma)
     if upfront_discount_percent is not None:
-        proforma.upfront_discount_percent = Decimal(str(upfront_discount_percent))
+        proforma.upfront_discount_percent = discount_percent_value(
+            upfront_discount_percent
+        )
     if extra_labour is not None:
-        proforma.extra_labour = money(extra_labour)
+        proforma.extra_labour = labour_value(extra_labour)
     if observations is not None:
         proforma.observations = observations
     proforma.updated_by = user
@@ -278,16 +324,22 @@ def require_delete_permission(user):
 
 def delete_client(client, user):
     require_delete_permission(user)
+    if client.sites.exists():
+        raise ValidationError("Cannot delete a client that still has sites.")
     client.soft_delete(user)
 
 
 def delete_site(site, user):
     require_delete_permission(user)
+    if site.proformas.exists():
+        raise ValidationError("Cannot delete a site that still has proformas.")
     site.soft_delete(user)
 
 
 def issue_proforma(proforma, user):
     require_draft(proforma)
+    if not proforma.lines.exists():
+        raise ValidationError("Cannot issue a proforma with no lines.")
     recompute_draft_totals(proforma)
     site = proforma.site
     client = site.client

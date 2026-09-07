@@ -46,13 +46,43 @@ def test_manager_cannot_delete_client(client):
 def test_admin_can_delete_client(client):
     call_command("seed_demo")
     admin = User.objects.get(email=DEMO_ADMIN_EMAIL)
-    org = Client.objects.get(name="Residencias do Tejo, Lda.")
+    org = Client.objects.create(name="Empty Client Ltd")
     client.force_login(admin)
     response = client.post(
         reverse("client_list"), {"id": str(org.pk), "action": "delete"}
     )
     assert response.status_code == 302
     assert not Client.objects.filter(pk=org.pk).exists()
+
+
+@pytest.mark.django_db
+def test_admin_cannot_delete_client_with_sites(client):
+    call_command("seed_demo")
+    admin = User.objects.get(email=DEMO_ADMIN_EMAIL)
+    org = Client.objects.get(name="Residencias do Tejo, Lda.")
+    client.force_login(admin)
+    response = client.post(
+        reverse("client_list"), {"id": str(org.pk), "action": "delete"}, follow=True
+    )
+    assert response.status_code == 200
+    assert Client.objects.filter(pk=org.pk).exists()
+    assert b"still has sites" in response.content
+
+
+@pytest.mark.django_db
+def test_manager_cannot_delete_site(client):
+    call_command("seed_demo")
+    manager = User.objects.get(email=DEMO_MANAGER_EMAIL)
+    site = Site.objects.get(alias_1="Moradia Cascais")
+    client.force_login(manager)
+    response = client.post(
+        reverse("site_list"), {"id": str(site.pk), "action": "delete"}
+    )
+    assert response.status_code == 403
+    assert Site.objects.filter(pk=site.pk).exists()
+    page = client.get(reverse("site_list"), {"id": str(site.pk)})
+    assert page.status_code == 200
+    assert b'value="delete"' not in page.content
 
 
 @pytest.mark.django_db

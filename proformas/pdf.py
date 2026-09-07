@@ -15,6 +15,7 @@ def build_proforma_pdf(proforma, lang="en"):
             "lines": proforma.lines.all(),
             "labels": quote_labels(lang),
             "company_name": COMPANY_NAME,
+            "html_lang": "pt-PT" if lang == "pt" else "en",
         },
     )
     return HTML(string=html).write_pdf()

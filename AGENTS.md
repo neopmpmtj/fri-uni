@@ -84,9 +84,9 @@ Mark complete during session-handoff: `- [x] ... (completed YYYY-MM-DD)`
 
 ## Session
 
-**Done:** Phases 1–8 in `proformas`. Demo seed (`seed_demo`) with admin/manager users, clients, sites, and sample quotes. Manager cannot delete. pytest 30 passed. First code review in `docs/reviews/`.
+**Done:** Phases 1–8 in `proformas`. Demo seed. pytest 48 passed. Review findings in `docs/reviews/` remediated (admin price/reason, CLI atomicity, snapshots on staff screens, delete-in-use guards, validation).
 
-**Not done:** Production deploy; letterhead; real prices. Review High findings not yet fixed.
+**Not done:** Production deploy; letterhead; real prices.
 
-**Next:** Read [`docs/reviews/code-review-2026-09-07-0617.md`](docs/reviews/code-review-2026-09-07-0617.md). Decide whether to fix High bugs or continue demo click-through.
+**Next:** Letterhead and live prices when supplied. Read [`docs/handoff.md`](docs/handoff.md).
 

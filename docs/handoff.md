@@ -1,6 +1,6 @@
 # Session handoff
 
-> **Last updated:** 2026-09-07 06:17 WEST (Europe/Lisbon)  
+> **Last updated:** 2026-09-07 06:40 WEST (Europe/Lisbon)  
 > Replace with the current date and time whenever you edit this file.
 
 ## Project
@@ -22,8 +22,8 @@ Uncommitted implementation is no longer the story: work is on feature branches w
 - Phases 1–8: login/`role`/dashboard i18n, models, catalog admin + `seed_catalog`, clients/sites drawers, draft quoting, issue/cancel snapshots, on-screen quote + WeasyPrint PDF, `create_proforma` CLI
 - Domain app named `proformas` (not `office`)
 - `seed_demo`: admin + manager users, three clients, five sites, five proformas (issued / draft / cancelled). Manager cannot soft-delete.
-- pytest: 30 passed
-- First code review saved at [`docs/reviews/code-review-2026-09-07-0617.md`](reviews/code-review-2026-09-07-0617.md) (test inventory, bugs, Bugbot comparison merged)
+- pytest: 48 passed
+- Code review at [`docs/reviews/code-review-2026-09-07-0617.md`](reviews/code-review-2026-09-07-0617.md); High/Medium/Low findings remediated on this branch
 
 ## Not done
 
@@ -34,7 +34,7 @@ Uncommitted implementation is no longer the story: work is on feature branches w
 
 ## Next
 
-Decide whether to fix review High findings (admin price-reason 500, admin save dropping other fields, uncaught line ValidationError 500, non-atomic CLI) or keep clicking through the issued quote + PDF as manager. Letterhead and live prices when the user supplies them.
+Letterhead and live prices when the user supplies them. Production deploy still open.
 
 Dev-server 404s for `/json/version` and `/service-worker.js` are the browser (DevTools / leftover SW on `127.0.0.1:8000`), not missing app routes. Unregister the service worker in DevTools if the log is noisy. Do not add a dummy SW.
 
